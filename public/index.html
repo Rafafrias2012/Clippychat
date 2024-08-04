@@ -1,4 +1,4 @@
-<html><head><base href="https://example.com/clippychat/Use%20draggable%20clippy%20on%20mobile%20and%20fix%20speech%20bubble%20is%20missing%20and%20mobile%20themed%20and%20dragging%20speech%20bubble%20and%20blank%20room%20is%20called%20default%2098.css">
+<html><head>
 <title>ClippyChat - Mobile 98 Style</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/98.css">
@@ -11,6 +11,7 @@
     overflow: hidden;
     font-family: "Pixelated MS Sans Serif", Arial;
     touch-action: none;
+    background-color: #008080;
   }
   #chatContainer {
     position: fixed;
@@ -21,9 +22,10 @@
     background-color: #c0c0c0;
     border-top: 2px solid #fff;
     box-shadow: inset 1px 1px #dfdfdf, 1px 0 #000, 0 1px #000, 1px 1px #000;
+    z-index: 1000;
   }
   #chatInput {
-    width: calc(100% - 80px);
+    width: calc(100% - 140px);
     margin-right: 10px;
   }
   .clippy {
@@ -64,6 +66,18 @@
     z-index: 1001;
     touch-action: none;
   }
+  #tileButton {
+    width: 50px;
+    height: 50px;
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1002;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABaklEQVR4nO2ZQUrDQBhGv4LgQhFcegYv4EIUXHsKN/UAIohX8BAiuHXjBVx7A6HgUnTlQiiiCzdWUEHs4v9hAqVYbGomk5n4HgykpZN5Hy0zm46AEOLPAE1gDEyBOfAK3AIDYMv7egQOgTFw7wE8ADfAJdAXkcHRBy6AB+DBg3gDdkW0OEyFrjMT4ejcAPtGRACZtbjRuR94TUkh1L7bUQkxcwO0SjO7/wFGJTS7KvAEnAM7RjBL0AzwCOwWDqIMGQA94Nb9nQFNEyC5kPMw6+QKcrZN2vTuDGg4J8AzMDEBki7WeeZm6Jv0nWsz23/TKwJGO9/MvQ7gTTtGKT2fQY6BJxMwITGdPGE0i+6cZqrA1OYF0Qa+lBeF2Zb+QuwTYo8Qe4TYI8QeIfYIsUeIPULsEWKPEHuE2CPEnhBCxsBOxe9zq/5tDDGvgK9VuE5FrVaIWQe+K3Bd7StzSEhJPbYUYkIIUQo/++B+Vl/Ic4YAAAAASUVORK5CYII=');
+    background-size: cover;
+    border: none;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -87,6 +101,8 @@
   </div>
 </div>
 
+<button id="tileButton"></button>
+
 <div id="chatContainer" style="display: none;">
   <input type="text" id="chatInput" class="input">
   <button id="sendButton">Send</button>
@@ -98,18 +114,45 @@ let clippyInstances = {};
 let currentUser = '';
 let currentRoom = '';
 let stage;
+const CHAT_HEIGHT = 60;
+const CLIPPY_WIDTH = 124;
+const CLIPPY_HEIGHT = 93;
 
 function randomPosition() {
   return {
-    x: Math.random() * (window.innerWidth - 124),
-    y: Math.random() * (window.innerHeight - 93 - 50)
+    x: Math.random() * (window.innerWidth - CLIPPY_WIDTH),
+    y: Math.random() * (window.innerHeight - CLIPPY_HEIGHT - CHAT_HEIGHT)
   };
+}
+
+function tileClippys() {
+  const clippyArray = Object.values(clippyInstances);
+  const availableWidth = window.innerWidth;
+  const availableHeight = window.innerHeight - CHAT_HEIGHT;
+  const cols = Math.floor(availableWidth / CLIPPY_WIDTH);
+  const rows = Math.ceil(clippyArray.length / cols);
+
+  clippyArray.forEach((clippy, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const x = col * CLIPPY_WIDTH;
+    const y = row * CLIPPY_HEIGHT;
+
+    createjs.Tween.get(clippy.clippy)
+      .to({x: x, y: y}, 500, createjs.Ease.quadOut);
+    
+    clippy.nameTag.style.transition = 'all 0.5s ease-out';
+    clippy.nameTag.style.left = `${x}px`;
+    clippy.nameTag.style.top = `${y - 20}px`;
+    
+    clippy.updateSpeechBubblePosition();
+  });
 }
 
 function createClippy(user, position) {
   const spriteSheet = new createjs.SpriteSheet({
     images: ["https://bonziworld.org/img/agents/clippy.png"],
-    frames: {width: 124, height: 93},
+    frames: {width: CLIPPY_WIDTH, height: CLIPPY_HEIGHT},
     animations: {
       idle: 0,
       enter: {
@@ -164,7 +207,6 @@ function createClippy(user, position) {
   clippy.on('pressmove', drag);
   clippy.on('pressup', endDrag);
 
-  // Touch events
   clippy.on('touchstart', startDrag);
   clippy.on('touchmove', drag);
   clippy.on('touchend', endDrag);
@@ -177,8 +219,8 @@ function createClippy(user, position) {
 
   function drag(event) {
     if (isDragging) {
-      clippy.x = event.stageX - startX;
-      clippy.y = event.stageY - startY;
+      clippy.x = Math.max(0, Math.min(event.stageX - startX, window.innerWidth - CLIPPY_WIDTH));
+      clippy.y = Math.max(0, Math.min(event.stageY - startY, window.innerHeight - CLIPPY_HEIGHT - CHAT_HEIGHT));
       nameTag.style.left = `${clippy.x}px`;
       nameTag.style.top = `${clippy.y - 20}px`;
       updateSpeechBubblePosition();
@@ -210,18 +252,16 @@ document.getElementById('loginButton').addEventListener('click', () => {
     const canvas = document.createElement('canvas');
     canvas.id = 'clippyCanvas';
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 50;
+    canvas.height = window.innerHeight - CHAT_HEIGHT;
     document.body.insertBefore(canvas, document.body.firstChild);
     stage = new createjs.Stage("clippyCanvas");
     createjs.Touch.enable(stage);
     createjs.Ticker.framerate = 30;
     createjs.Ticker.addEventListener("tick", stage);
     
-    // Create a clippy for the current user
     const position = randomPosition();
     clippyInstances[currentUser] = createClippy(currentUser, position);
     clippyInstances[currentUser].clippy.gotoAndPlay("enter");
-    clippyInstances[currentUser].speak(`Welcome, ${currentUser}!`);
   }
 });
 
@@ -266,7 +306,6 @@ function sendMessage() {
       currentUser = newName;
     } else {
       socket.emit('talk', { user: currentUser, text: text });
-      // Make the current user's clippy speak
       if (clippyInstances[currentUser]) {
         clippyInstances[currentUser].speak(text);
       }
@@ -278,9 +317,11 @@ function sendMessage() {
 window.addEventListener('resize', () => {
   if (stage) {
     stage.canvas.width = window.innerWidth;
-    stage.canvas.height = window.innerHeight - 50;
+    stage.canvas.height = window.innerHeight - CHAT_HEIGHT;
   }
 });
+
+document.getElementById('tileButton').addEventListener('click', tileClippys);
 
 </script>
 </body>
