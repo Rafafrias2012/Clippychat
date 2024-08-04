@@ -1,4 +1,4 @@
-<html><head>
+<html><head><base href="https://example.com/clippychat/Use%20draggable%20clippy%20on%20mobile%20and%20fix%20speech%20bubble%20is%20missing%20and%20mobile%20themed%20and%20dragging%20speech%20bubble%20and%20blank%20room%20is%20called%20default%2098.css">
 <title>ClippyChat - Mobile 98 Style</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/98.css">
@@ -11,7 +11,6 @@
     overflow: hidden;
     font-family: "Pixelated MS Sans Serif", Arial;
     touch-action: none;
-    background-color: #008080;
   }
   #chatContainer {
     position: fixed;
@@ -30,6 +29,7 @@
   .clippy {
     position: absolute;
     touch-action: none;
+    z-index: 10;
   }
   .speech-bubble {
     position: absolute;
@@ -216,13 +216,21 @@ document.getElementById('loginButton').addEventListener('click', () => {
     createjs.Touch.enable(stage);
     createjs.Ticker.framerate = 30;
     createjs.Ticker.addEventListener("tick", stage);
+    
+    // Create a clippy for the current user
+    const position = randomPosition();
+    clippyInstances[currentUser] = createClippy(currentUser, position);
+    clippyInstances[currentUser].clippy.gotoAndPlay("enter");
+    clippyInstances[currentUser].speak(`Welcome, ${currentUser}!`);
   }
 });
 
 socket.on('join', (user) => {
-  const position = randomPosition();
-  clippyInstances[user] = createClippy(user, position);
-  clippyInstances[user].clippy.gotoAndPlay("enter");
+  if (user !== currentUser) {
+    const position = randomPosition();
+    clippyInstances[user] = createClippy(user, position);
+    clippyInstances[user].clippy.gotoAndPlay("enter");
+  }
 });
 
 socket.on('leave', (id) => {
@@ -258,6 +266,10 @@ function sendMessage() {
       currentUser = newName;
     } else {
       socket.emit('talk', { user: currentUser, text: text });
+      // Make the current user's clippy speak
+      if (clippyInstances[currentUser]) {
+        clippyInstances[currentUser].speak(text);
+      }
     }
     input.value = '';
   }
