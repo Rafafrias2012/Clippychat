@@ -1,21 +1,45 @@
-<html><head><base href="https://bonziworld.org/"></head>
-<body>
-<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+<html><head><base href="https://bonziworld.org/"><title>BonziWorld</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/98.css">
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
 <style>
-body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    overflow: hidden;
+body, html { 
+    margin: 0; 
+    padding: 0; 
+    height: 100%; 
+    overflow: hidden; 
     font-family: "MS Sans Serif", Arial, sans-serif;
+    background: #008080;
 }
-#bonziWorld {
+#bonziContainer { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: calc(100% - 30px); 
+}
+#chatbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
     width: 100%;
-    height: calc(100% - 30px);
-    position: relative;
+    height: 30px;
+    background: #c0c0c0;
+    border-top: 1px solid #ffffff;
+    box-shadow: inset 0 1px #dfdfdf;
+}
+#chatInput {
+    width: calc(100% - 110px);
+    height: 20px;
+    margin: 5px;
+    padding: 0 5px;
+}
+#sendButton, #uploadButton {
+    width: 40px;
+    height: 20px;
+    margin: 5px 2px;
 }
 .bonzi {
     position: absolute;
@@ -23,186 +47,100 @@ body, html {
     height: 160px;
     cursor: move;
 }
-.speechBubble, .nameBubble {
+.bonziSpeech {
     position: absolute;
-    background: #fff;
-    border: 2px solid #000;
+    background: #ffffcc;
+    border: 2px solid #000000;
     border-radius: 10px;
     padding: 5px;
     max-width: 200px;
     word-wrap: break-word;
 }
-.nameBubble {
-    top: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-}
-.adminTag {
-    background: red;
-    color: white;
+.bonziName {
+    position: absolute;
+    background: #000080;
+    color: #ffffff;
     padding: 2px 5px;
-    border-radius: 3px;
-    margin-left: 5px;
+    border-radius: 5px;
+    font-size: 12px;
 }
-#chatBar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 30px;
-    display: flex;
+.admin::after {
+    content: " [ADMIN]";
+    color: #ff0000;
 }
-#chatInput {
-    flex-grow: 1;
+.contextMenu {
+    position: absolute;
+    background: #c0c0c0;
+    border: 1px solid #000000;
+    padding: 2px;
 }
-#loginModal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1000;
+.contextMenuItem {
+    padding: 2px 5px;
+    cursor: pointer;
+}
+.contextMenuItem:hover {
+    background: #000080;
+    color: #ffffff;
 }
 </style>
-
-<div id="bonziWorld"></div>
-<div id="chatBar">
-    <input type="text" id="chatInput" class="win98-input" placeholder="Chat here...">
-    <button id="sendBtn" class="win98-button">Send</button>
-    <input type="file" id="imageUpload" accept="image/*" style="display:none;">
-    <button id="uploadBtn" class="win98-button">Upload Image</button>
-</div>
-
-<div id="loginModal" class="window">
-    <div class="title-bar">
-        <div class="title-bar-text">Login</div>
-    </div>
-    <div class="window-body">
-        <p>Enter your nickname and room ID:</p>
-        <input type="text" id="nicknameInput" class="win98-input" placeholder="Nickname">
-        <input type="text" id="roomInput" class="win98-input" placeholder="Room ID">
-        <button id="loginBtn" class="win98-button">Join</button>
-    </div>
+</head>
+<body>
+<div id="bonziContainer"></div>
+<div id="chatbar">
+    <input type="text" id="chatInput" placeholder="Type your message...">
+    <button id="sendButton">Send</button>
+    <button id="uploadButton">📷</button>
 </div>
 
 <script>
 const socket = io();
 let currentUser = null;
 let bonzis = {};
-let isAdmin = false;
-
-const bonziWorld = document.getElementById('bonziWorld');
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const loginModal = document.getElementById('loginModal');
-const nicknameInput = document.getElementById('nicknameInput');
-const roomInput = document.getElementById('roomInput');
-const loginBtn = document.getElementById('loginBtn');
-const uploadBtn = document.getElementById('uploadBtn');
-const imageUpload = document.getElementById('imageUpload');
-
-loginBtn.addEventListener('click', () => {
-    const nickname = nicknameInput.value.trim();
-    const room = roomInput.value.trim();
-    if (nickname && room) {
-        socket.emit('join', { nickname, room });
-        loginModal.style.display = 'none';
-        currentUser = nickname;
-    }
-});
-
-sendBtn.addEventListener('click', sendMessage);
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-});
-
-uploadBtn.addEventListener('click', () => imageUpload.click());
-imageUpload.addEventListener('change', handleImageUpload);
-
-function sendMessage() {
-    const text = chatInput.value.trim();
-    if (text) {
-        if (text.startsWith('/')) {
-            handleCommand(text);
-        } else {
-            socket.emit('talk', { text });
-        }
-        chatInput.value = '';
-    }
-}
-
-function handleCommand(command) {
-    const [cmd, ...args] = command.slice(1).split(' ');
-    switch (cmd) {
-        case 'name':
-            socket.emit('changeName', { newName: args.join(' ') });
-            break;
-        case 'image':
-            addImage(args[0]);
-            break;
-        case 'asshole':
-            if (args[0]) socket.emit('asshole', { target: args[0] });
-            break;
-        case 'owo':
-            if (args[0]) socket.emit('owo', { target: args[0] });
-            break;
-    }
-}
-
-function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            addImage(event.target.result);
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function addImage(url) {
-    const img = new Image();
-    img.src = url;
-    img.style.maxWidth = '200px';
-    img.style.maxHeight = '200px';
-    bonzis[currentUser].speechBubble.innerHTML = '';
-    bonzis[currentUser].speechBubble.appendChild(img);
-    socket.emit('talk', { text: `[Image: ${url}]` });
-}
 
 class Bonzi {
-    constructor(user, isAdmin = false) {
-        this.user = user;
+    constructor(id, username, x, y, isAdmin = false) {
+        this.id = id;
+        this.username = username;
+        this.isAdmin = isAdmin;
         this.element = document.createElement('div');
         this.element.className = 'bonzi';
-        this.element.style.left = `${Math.random() * (window.innerWidth - 200)}px`;
-        this.element.style.top = `${Math.random() * (window.innerHeight - 190)}px`;
+        this.element.style.left = x + 'px';
+        this.element.style.top = y + 'px';
 
-        this.sprite = new Image();
-        this.sprite.src = 'https://bonziworld.org/img/agents/purple.png';
-        this.sprite.width = 200;
-        this.sprite.height = 160;
+        this.sprite = new createjs.Sprite(new createjs.SpriteSheet({
+            images: ["https://bonziworld.org/img/agents/purple.png"],
+            frames: {width: 200, height: 160},
+            animations: {
+                idle: 0,
+                enter: [277, 302, "idle", 0.25],
+                leave: [16, 39, 40, 0.25]
+            }
+        }));
 
-        this.nameBubble = document.createElement('div');
-        this.nameBubble.className = 'nameBubble';
-        this.nameBubble.textContent = user;
-        if (isAdmin) {
-            const adminTag = document.createElement('span');
-            adminTag.className = 'adminTag';
-            adminTag.textContent = 'Admin';
-            this.nameBubble.appendChild(adminTag);
-        }
+        this.stage = new createjs.Stage(document.createElement('canvas'));
+        this.stage.canvas.width = 200;
+        this.stage.canvas.height = 160;
+        this.stage.addChild(this.sprite);
+
+        this.element.appendChild(this.stage.canvas);
 
         this.speechBubble = document.createElement('div');
-        this.speechBubble.className = 'speechBubble';
+        this.speechBubble.className = 'bonziSpeech';
         this.speechBubble.style.display = 'none';
-
-        this.element.appendChild(this.sprite);
-        this.element.appendChild(this.nameBubble);
         this.element.appendChild(this.speechBubble);
 
-        bonziWorld.appendChild(this.element);
+        this.nameTag = document.createElement('div');
+        this.nameTag.className = 'bonziName' + (isAdmin ? ' admin' : '');
+        this.nameTag.textContent = username;
+        this.element.appendChild(this.nameTag);
+
+        document.getElementById('bonziContainer').appendChild(this.element);
+
+        this.sprite.gotoAndPlay('enter');
+        createjs.Ticker.addEventListener("tick", () => this.stage.update());
+
         this.makeDraggable();
+        this.addContextMenu();
     }
 
     makeDraggable() {
@@ -217,13 +155,41 @@ class Bonzi {
 
         document.addEventListener('mousemove', (e) => {
             if (isDragging) {
-                this.element.style.left = `${e.clientX - startX}px`;
-                this.element.style.top = `${e.clientY - startY}px`;
+                this.element.style.left = (e.clientX - startX) + 'px';
+                this.element.style.top = (e.clientY - startY) + 'px';
             }
         });
 
         document.addEventListener('mouseup', () => {
             isDragging = false;
+        });
+    }
+
+    addContextMenu() {
+        this.element.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (currentUser && currentUser.isAdmin) {
+                let menu = document.createElement('div');
+                menu.className = 'contextMenu';
+                menu.style.left = e.pageX + 'px';
+                menu.style.top = e.pageY + 'px';
+
+                let kickOption = document.createElement('div');
+                kickOption.className = 'contextMenuItem';
+                kickOption.textContent = 'Kick User';
+                kickOption.onclick = () => {
+                    socket.emit('kick', this.id);
+                    menu.remove();
+                };
+
+                menu.appendChild(kickOption);
+                document.body.appendChild(menu);
+
+                document.addEventListener('click', function removeMenu() {
+                    menu.remove();
+                    document.removeEventListener('click', removeMenu);
+                });
+            }
         });
     }
 
@@ -234,103 +200,104 @@ class Bonzi {
             this.speechBubble.style.display = 'none';
         }, 5000);
 
-        // Text-to-speech
-        const url = `https://www.tetyys.com/SAPI4/SAPI4?text=${encodeURIComponent(text)}&voice=${encodeURIComponent("Adult Male #2, American English (TruVoice)")}&pitch=140&speed=157`;
-        const audio = new Audio(url);
+        let url = "https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(text) + "&voice=" + encodeURIComponent("Adult Male #2, American English (TruVoice)") + "&pitch=140&speed=157";
+        let audio = new Audio(url);
         audio.play();
     }
 
-    asshole(target) {
-        this.speak(`Hey, ${target}! You're a fucking asshole!`);
-    }
-
-    owo(target) {
-        this.speak(`*notices ${target}'s BonziBulge™* owo, wat dis?`);
+    remove() {
+        this.sprite.gotoAndPlay('leave');
+        setTimeout(() => {
+            this.element.remove();
+        }, 1000);
     }
 }
 
+function login() {
+    let nickname = prompt("Enter your nickname:");
+    let roomId = prompt("Enter room ID:");
+    if (nickname && roomId) {
+        socket.emit('join', { nickname, roomId });
+    }
+}
+
+socket.on('connect', login);
+
 socket.on('join', (user) => {
-    bonzis[user.nickname] = new Bonzi(user.nickname, user.isAdmin);
+    let x = Math.random() * (window.innerWidth - 200);
+    let y = Math.random() * (window.innerHeight - 190);
+    bonzis[user.id] = new Bonzi(user.id, user.nickname, x, y, user.isAdmin);
+    if (user.id === socket.id) {
+        currentUser = user;
+    }
 });
 
 socket.on('leave', (id) => {
     if (bonzis[id]) {
-        bonzis[id].element.remove();
+        bonzis[id].remove();
         delete bonzis[id];
     }
 });
 
-socket.on('talk', ({ user, text }) => {
-    if (bonzis[user]) {
-        bonzis[user].speak(text);
+socket.on('talk', (data) => {
+    if (bonzis[data.id]) {
+        bonzis[data.id].speak(data.text);
     }
 });
 
 socket.on('update', (user) => {
-    if (bonzis[user.oldNickname]) {
-        bonzis[user.nickname] = bonzis[user.oldNickname];
-        bonzis[user.nickname].user = user.nickname;
-        bonzis[user.nickname].nameBubble.textContent = user.nickname;
-        delete bonzis[user.oldNickname];
+    if (bonzis[user.id]) {
+        bonzis[user.id].username = user.nickname;
+        bonzis[user.id].nameTag.textContent = user.nickname;
+        bonzis[user.id].isAdmin = user.isAdmin;
+        bonzis[user.id].nameTag.className = 'bonziName' + (user.isAdmin ? ' admin' : '');
     }
 });
 
-socket.on('asshole', ({ user, target }) => {
-    if (bonzis[user]) {
-        bonzis[user].asshole(target);
-    }
+document.getElementById('sendButton').addEventListener('click', sendMessage);
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
 });
 
-socket.on('owo', ({ user, target }) => {
-    if (bonzis[user]) {
-        bonzis[user].owo(target);
-    }
-});
-
-// Context menu
-document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    const contextMenu = document.createElement('div');
-    contextMenu.className = 'window';
-    contextMenu.style.position = 'absolute';
-    contextMenu.style.left = `${e.clientX}px`;
-    contextMenu.style.top = `${e.clientY}px`;
-    contextMenu.style.zIndex = '1000';
-
-    const menuItems = [
-        { text: 'Call an asshole', action: () => socket.emit('asshole', { target: currentUser }) },
-        { text: 'Notice bulge', action: () => socket.emit('owo', { target: currentUser }) },
-    ];
-
-    if (isAdmin) {
-        menuItems.push({ text: 'Kick user', action: () => socket.emit('kickUser', { user: currentUser }) });
-    }
-
-    menuItems.forEach(item => {
-        const button = document.createElement('button');
-        button.className = 'win98-button';
-        button.textContent = item.text;
-        button.onclick = () => {
-            item.action();
-            contextMenu.remove();
-        };
-        contextMenu.appendChild(button);
-    });
-
-    document.body.appendChild(contextMenu);
-
-    const removeMenu = (e) => {
-        if (!contextMenu.contains(e.target)) {
-            contextMenu.remove();
-            document.removeEventListener('click', removeMenu);
+function sendMessage() {
+    let input = document.getElementById('chatInput');
+    let text = input.value.trim();
+    if (text) {
+        if (text.startsWith('/')) {
+            handleCommand(text);
+        } else {
+            socket.emit('talk', text);
         }
-    };
+        input.value = '';
+    }
+}
 
-    document.addEventListener('click', removeMenu);
+function handleCommand(command) {
+    let parts = command.split(' ');
+    switch(parts[0]) {
+        case '/name':
+            if (parts[1]) socket.emit('update', { nickname: parts[1] });
+            break;
+        case '/image':
+            if (parts[1]) socket.emit('talk', `<img src="${parts[1]}" alt="User shared image" style="max-width:200px;max-height:200px;">`);
+            break;
+    }
+}
+
+document.getElementById('uploadButton').addEventListener('click', () => {
+    navigator.clipboard.read().then(data => {
+        for (let item of data) {
+            if (item.types.includes('image/png')) {
+                item.getType('image/png').then(blob => {
+                    let reader = new FileReader();
+                    reader.onload = function(e) {
+                        socket.emit('talk', `<img src="${e.target.result}" alt="User shared image" style="max-width:200px;max-height:200px;">`);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+            }
+        }
+    });
 });
-
-// Initialize
-loginModal.style.display = 'block';
 </script>
-</body>
-</html>
+</body></html>
