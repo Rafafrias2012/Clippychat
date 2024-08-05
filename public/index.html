@@ -1,6 +1,6 @@
 <html><head><base href="https://bonziworld.org/"><title>BonziWorld</title>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/98.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
 <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
@@ -12,6 +12,7 @@ body, html {
     overflow: hidden; 
     font-family: "MS Sans Serif", Arial, sans-serif;
     background: #008080;
+    touch-action: none;
 }
 #bonziContainer { 
     position: absolute; 
@@ -45,24 +46,35 @@ body, html {
     position: absolute;
     width: 200px;
     height: 160px;
-    cursor: move;
+    touch-action: none;
 }
 .bonziSpeech {
     position: absolute;
+    top: -60px;
+    left: 0;
+    right: 0;
+    margin: auto;
     background: #ffffcc;
     border: 2px solid #000000;
     border-radius: 10px;
     padding: 5px;
     max-width: 200px;
     word-wrap: break-word;
+    box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
 }
 .bonziName {
     position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    margin: auto;
     background: #000080;
     color: #ffffff;
     padding: 2px 5px;
-    border-radius: 5px;
+    border-radius: 3px;
     font-size: 12px;
+    text-align: center;
+    box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
 }
 .admin::after {
     content: " [ADMIN]";
@@ -73,6 +85,7 @@ body, html {
     background: #c0c0c0;
     border: 1px solid #000000;
     padding: 2px;
+    box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
 }
 .contextMenuItem {
     padding: 2px 5px;
@@ -81,6 +94,30 @@ body, html {
 .contextMenuItem:hover {
     background: #000080;
     color: #ffffff;
+}
+.window {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #c0c0c0;
+    border: 1px solid #000000;
+    box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
+    padding: 3px;
+}
+.window-title {
+    background: #000080;
+    color: #ffffff;
+    padding: 3px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.window-content {
+    padding: 10px;
+}
+.window-buttons {
+    text-align: right;
+    margin-top: 10px;
 }
 </style>
 </head>
@@ -147,42 +184,65 @@ class Bonzi {
         let isDragging = false;
         let startX, startY;
 
-        this.element.addEventListener('mousedown', (e) => {
+        const startDrag = (e) => {
             isDragging = true;
-            startX = e.clientX - this.element.offsetLeft;
-            startY = e.clientY - this.element.offsetTop;
-        });
+            startX = (e.clientX || e.touches[0].clientX) - this.element.offsetLeft;
+            startY = (e.clientY || e.touches[0].clientY) - this.element.offsetTop;
+            e.preventDefault();
+        };
 
-        document.addEventListener('mousemove', (e) => {
+        const drag = (e) => {
             if (isDragging) {
-                this.element.style.left = (e.clientX - startX) + 'px';
-                this.element.style.top = (e.clientY - startY) + 'px';
+                let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                this.element.style.left = (clientX - startX) + 'px';
+                this.element.style.top = (clientY - startY) + 'px';
             }
-        });
+        };
 
-        document.addEventListener('mouseup', () => {
+        const endDrag = () => {
             isDragging = false;
-        });
+        };
+
+        this.element.addEventListener('mousedown', startDrag);
+        this.element.addEventListener('touchstart', startDrag);
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
     }
 
     addContextMenu() {
         this.element.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            if (currentUser && currentUser.isAdmin) {
+            if (currentUser && (currentUser.isAdmin || currentUser.id === this.id)) {
                 let menu = document.createElement('div');
                 menu.className = 'contextMenu';
                 menu.style.left = e.pageX + 'px';
                 menu.style.top = e.pageY + 'px';
 
-                let kickOption = document.createElement('div');
-                kickOption.className = 'contextMenuItem';
-                kickOption.textContent = 'Kick User';
-                kickOption.onclick = () => {
-                    socket.emit('kick', this.id);
+                if (currentUser.isAdmin) {
+                    let kickOption = document.createElement('div');
+                    kickOption.className = 'contextMenuItem';
+                    kickOption.textContent = 'Kick User';
+                    kickOption.onclick = () => {
+                        socket.emit('kick', this.id);
+                        menu.remove();
+                    };
+                    menu.appendChild(kickOption);
+                }
+
+                let muteOption = document.createElement('div');
+                muteOption.className = 'contextMenuItem';
+                muteOption.textContent = 'Mute User';
+                muteOption.onclick = () => {
+                    socket.emit('mute', this.id);
                     menu.remove();
                 };
+                menu.appendChild(muteOption);
 
-                menu.appendChild(kickOption);
                 document.body.appendChild(menu);
 
                 document.addEventListener('click', function removeMenu() {
@@ -213,12 +273,39 @@ class Bonzi {
     }
 }
 
+function showDialog(title, content, onOk) {
+    let dialog = document.createElement('div');
+    dialog.className = 'window';
+    dialog.innerHTML = `
+        <div class="window-title">${title}</div>
+        <div class="window-content">${content}</div>
+        <div class="window-buttons">
+            <button class="ok-button">OK</button>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+
+    dialog.querySelector('.ok-button').addEventListener('click', () => {
+        if (onOk) onOk();
+        dialog.remove();
+    });
+}
+
 function login() {
-    let nickname = prompt("Enter your nickname:");
-    let roomId = prompt("Enter room ID:");
-    if (nickname && roomId) {
-        socket.emit('join', { nickname, roomId });
-    }
+    let storedNickname = localStorage.getItem('nickname') || '';
+    showDialog('Login', `
+        <label for="nickname">Nickname:</label>
+        <input type="text" id="nickname" value="${storedNickname}"><br><br>
+        <label for="roomId">Room ID:</label>
+        <input type="text" id="roomId" value="default">
+    `, () => {
+        let nickname = document.getElementById('nickname').value.trim();
+        let roomId = document.getElementById('roomId').value.trim() || 'default';
+        if (nickname) {
+            localStorage.setItem('nickname', nickname);
+            socket.emit('join', { nickname, roomId });
+        }
+    });
 }
 
 socket.on('connect', login);
@@ -254,6 +341,20 @@ socket.on('update', (user) => {
     }
 });
 
+socket.on('kick', (id) => {
+    if (id === socket.id) {
+        showDialog('Kicked', 'You have been kicked from the room.', () => {
+            location.reload();
+        });
+    }
+});
+
+socket.on('mute', (id) => {
+    if (id === socket.id) {
+        showDialog('Muted', 'You have been muted.');
+    }
+});
+
 document.getElementById('sendButton').addEventListener('click', sendMessage);
 document.getElementById('chatInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
@@ -276,7 +377,10 @@ function handleCommand(command) {
     let parts = command.split(' ');
     switch(parts[0]) {
         case '/name':
-            if (parts[1]) socket.emit('update', { nickname: parts[1] });
+            if (parts[1]) {
+                socket.emit('update', { nickname: parts[1] });
+                localStorage.setItem('nickname', parts[1]);
+            }
             break;
         case '/image':
             if (parts[1]) socket.emit('talk', `<img src="${parts[1]}" alt="User shared image" style="max-width:200px;max-height:200px;">`);
