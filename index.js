@@ -4,7 +4,6 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 
 let users = {};
-let admins = {};
 
 app.use(express.static('public'));
 
@@ -12,49 +11,43 @@ io.on('connection', (socket) => {
   console.log('New connection');
 
   socket.on('join', (data) => {
-    const { nickname, room } = data;
-    users[nickname] = socket.id;
-    admins[nickname] = false; // default to not admin
-    socket.join(room);
-    io.to(room).emit('join', { nickname, isAdmin: admins[nickname] });
+    let user = {
+      id: socket.id,
+      nickname: data.nickname,
+      roomId: data.roomId,
+      isAdmin: false
+    };
+    users[socket.id] = user;
+    socket.emit('join', user);
+    socket.broadcast.emit('join', user);
   });
 
-  socket.on('talk', (data) => {
-    const { text } = data;
-    io.to(socket.room).emit('talk', { user: socket.nickname, text });
+  socket.on('talk', (text) => {
+    socket.emit('talk', { id: socket.id, text: text });
+    socket.broadcast.emit('talk', { id: socket.id, text: text });
   });
 
-  socket.on('changeName', (data) => {
-    const { oldNickname, newNickname } = data;
-    users[newNickname] = users[oldNickname];
-    delete users[oldNickname];
-    admins[newNickname] = admins[oldNickname];
-    delete admins[oldNickname];
-    io.to(socket.room).emit('update', { oldNickname, newNickname });
+  socket.on('update', (data) => {
+    users[socket.id].nickname = data.nickname;
+    users[socket.id].isAdmin = data.isAdmin;
+    socket.emit('update', users[socket.id]);
+    socket.broadcast.emit('update', users[socket.id]);
   });
 
-  socket.on('asshole', (data) => {
-    const { target } = data;
-    io.to(socket.room).emit('asshole', { user: socket.nickname, target });
-  });
-
-  socket.on('owo', (data) => {
-    const { target } = data;
-    io.to(socket.room).emit('owo', { user: socket.nickname, target });
-  });
-
-  socket.on('kickUser', (data) => {
-    const { user } = data;
-    io.to(socket.room).emit('leave', user);
-    delete users[user];
-    delete admins[user];
+  socket.on('kick', (id) => {
+    if (users[id]) {
+      socket.emit('leave', id);
+      socket.broadcast.emit('leave', id);
+      delete users[id];
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('Disconnected');
-    io.to(socket.room).emit('leave', socket.nickname);
-    delete users[socket.nickname];
-    delete admins[socket.nickname];
+    if (users[socket.id]) {
+      socket.emit('leave', socket.id);
+      socket.broadcast.emit('leave', socket.id);
+      delete users[socket.id];
+    }
   });
 });
 
