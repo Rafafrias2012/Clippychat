@@ -1,4 +1,4 @@
-<html><head><base href="https://bonziworld.org/"><title>BonziWorld</title>
+<html><head><base href="https://bonziworld.org/"><title>BonziWorld v0.1.3</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/98.css">
@@ -50,7 +50,7 @@ body, html {
 }
 .bonziSpeech {
     position: absolute;
-    top: -60px;
+    top: -80px;
     left: 0;
     right: 0;
     margin: auto;
@@ -61,6 +61,7 @@ body, html {
     max-width: 200px;
     word-wrap: break-word;
     box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
+    z-index: 10;
 }
 .bonziName {
     position: absolute;
@@ -119,6 +120,16 @@ body, html {
     text-align: right;
     margin-top: 10px;
 }
+#versionBar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    background: #c0c0c0;
+    padding: 2px 5px;
+    font-size: 12px;
+    border-bottom-left-radius: 5px;
+    box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
+}
 </style>
 </head>
 <body>
@@ -128,11 +139,13 @@ body, html {
     <button id="sendButton">Send</button>
     <button id="uploadButton">📷</button>
 </div>
+<div id="versionBar">v0.1.3</div>
 
 <script>
 const socket = io();
 let currentUser = null;
 let bonzis = {};
+let currentVoice = "Adult Male #2, American English (TruVoice)";
 
 class Bonzi {
     constructor(id, username, x, y, isAdmin = false) {
@@ -149,6 +162,10 @@ class Bonzi {
             frames: {width: 200, height: 160},
             animations: {
                 idle: 0,
+                talk: {
+                    frames: [1, 2, 3, 2, 1, 0],
+                    speed: 0.25
+                },
                 enter: [277, 302, "idle", 0.25],
                 leave: [16, 39, 40, 0.25]
             }
@@ -256,11 +273,13 @@ class Bonzi {
     speak(text) {
         this.speechBubble.textContent = text;
         this.speechBubble.style.display = 'block';
+        this.sprite.gotoAndPlay('talk');
         setTimeout(() => {
             this.speechBubble.style.display = 'none';
+            this.sprite.gotoAndPlay('idle');
         }, 5000);
 
-        let url = "https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(text) + "&voice=" + encodeURIComponent("Adult Male #2, American English (TruVoice)") + "&pitch=140&speed=157";
+        let url = "https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(text) + "&voice=" + encodeURIComponent(currentVoice) + "&pitch=140&speed=157";
         let audio = new Audio(url);
         audio.play();
     }
@@ -380,6 +399,12 @@ function handleCommand(command) {
             if (parts[1]) {
                 socket.emit('update', { nickname: parts[1] });
                 localStorage.setItem('nickname', parts[1]);
+            }
+            break;
+        case '/voice':
+            if (parts.slice(1).join(' ')) {
+                currentVoice = parts.slice(1).join(' ');
+                showDialog('Voice Changed', `Voice set to: ${currentVoice}`);
             }
             break;
         case '/image':
