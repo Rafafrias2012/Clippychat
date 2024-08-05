@@ -1,374 +1,336 @@
-<html><head><base href="https://example.com/clippychat/">
-<meta charset="UTF-8">
-<title>ClippyChat - Windows 98 Style</title>
-<link rel="stylesheet" href="https://unpkg.com/98.css">
-<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
-<style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-        font-family: "MS Sans Serif", Arial, sans-serif;
-        background-image: url('https://i.imgur.com/vDuGhj1.jpg');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-    #chatContainer {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: rgba(192, 192, 192, 0.8);
-        border-top: 2px solid #fff;
-        border-bottom: 2px solid #000;
-        padding: 5px;
-    }
-    #chatInput {
-        width: calc(100% - 200px);
-        margin-right: 5px;
-    }
-    #sendButton, #uploadButton {
-        width: 90px;
-    }
-    .clippy {
-        position: absolute;
-        cursor: move;
-    }
-    .speech-bubble {
-        position: absolute;
-        background: rgba(255, 255, 255, 0.9);
-        border: 2px solid #000;
-        border-radius: 10px;
-        padding: 10px;
-        max-width: 200px;
-        z-index: 1000;
-    }
-    .speech-bubble:after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border: 20px solid transparent;
-        border-top-color: rgba(255, 255, 255, 0.9);
-        border-bottom: 0;
-        margin-left: -20px;
-        margin-bottom: -20px;
-    }
-    .name-tag {
-        position: absolute;
-        background: rgba(0, 0, 128, 0.8);
-        color: #fff;
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-size: 12px;
-        z-index: 1001;
-    }
-    .admin-tag {
-        background: rgba(128, 0, 0, 0.8);
-        margin-left: 5px;
-    }
-    #loginWindow {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 2000;
-    }
-    #uploadButton {
-        margin-left: 5px;
-    }
-    .shared-image {
-        max-width: 150px;
-        max-height: 150px;
-        display: block;
-        margin: 5px 0;
-    }
-</style>
-</head>
+<html><head><base href="https://bonziworld.org/"></head>
 <body>
-<div id="loginWindow" class="window">
-    <div class="title-bar">
-        <div class="title-bar-text">Login to ClippyChat</div>
-    </div>
-    <div class="window-body">
-        <p>Enter your nickname and room ID to join:</p>
-        <div class="field-row">
-            <label for="nicknameInput">Nickname:</label>
-            <input id="nicknameInput" type="text">
-        </div>
-        <div class="field-row">
-            <label for="roomInput">Room ID:</label>
-            <input id="roomInput" type="text">
-        </div>
-        <div class="field-row">
-            <button id="loginButton">Join Chat</button>
-        </div>
-    </div>
+<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/98.css">
+
+<style>
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: "MS Sans Serif", Arial, sans-serif;
+}
+#bonziWorld {
+    width: 100%;
+    height: calc(100% - 30px);
+    position: relative;
+}
+.bonzi {
+    position: absolute;
+    width: 200px;
+    height: 160px;
+    cursor: move;
+}
+.speechBubble, .nameBubble {
+    position: absolute;
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 10px;
+    padding: 5px;
+    max-width: 200px;
+    word-wrap: break-word;
+}
+.nameBubble {
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.adminTag {
+    background: red;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+}
+#chatBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    display: flex;
+}
+#chatInput {
+    flex-grow: 1;
+}
+#loginModal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+</style>
+
+<div id="bonziWorld"></div>
+<div id="chatBar">
+    <input type="text" id="chatInput" class="win98-input" placeholder="Chat here...">
+    <button id="sendBtn" class="win98-button">Send</button>
+    <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+    <button id="uploadBtn" class="win98-button">Upload Image</button>
 </div>
 
-<div id="chatContainer">
-    <input type="text" id="chatInput" class="input-text">
-    <button id="sendButton">Send</button>
-    <button id="uploadButton">Upload</button>
-    <input type="file" id="fileInput" style="display: none;" accept="image/*">
+<div id="loginModal" class="window">
+    <div class="title-bar">
+        <div class="title-bar-text">Login</div>
+    </div>
+    <div class="window-body">
+        <p>Enter your nickname and room ID:</p>
+        <input type="text" id="nicknameInput" class="win98-input" placeholder="Nickname">
+        <input type="text" id="roomInput" class="win98-input" placeholder="Room ID">
+        <button id="loginBtn" class="win98-button">Join</button>
+    </div>
 </div>
 
 <script>
-    const socket = io();
-    let nickname = '';
-    let roomId = '';
-    let isAdmin = false;
-    const clippies = {};
+const socket = io();
+let currentUser = null;
+let bonzis = {};
+let isAdmin = false;
 
-    const loginButton = document.getElementById('loginButton');
-    const nicknameInput = document.getElementById('nicknameInput');
-    const roomInput = document.getElementById('roomInput');
-    const loginWindow = document.getElementById('loginWindow');
-    const chatInput = document.getElementById('chatInput');
-    const sendButton = document.getElementById('sendButton');
-    const uploadButton = document.getElementById('uploadButton');
-    const fileInput = document.getElementById('fileInput');
+const bonziWorld = document.getElementById('bonziWorld');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const loginModal = document.getElementById('loginModal');
+const nicknameInput = document.getElementById('nicknameInput');
+const roomInput = document.getElementById('roomInput');
+const loginBtn = document.getElementById('loginBtn');
+const uploadBtn = document.getElementById('uploadBtn');
+const imageUpload = document.getElementById('imageUpload');
 
-    loginButton.addEventListener('click', () => {
-        nickname = nicknameInput.value.trim();
-        roomId = roomInput.value.trim();
-        if (nickname && roomId) {
-            socket.emit('join', { user: nickname, room: roomId });
-            loginWindow.style.display = 'none';
-        }
-    });
+loginBtn.addEventListener('click', () => {
+    const nickname = nicknameInput.value.trim();
+    const room = roomInput.value.trim();
+    if (nickname && room) {
+        socket.emit('join', { nickname, room });
+        loginModal.style.display = 'none';
+        currentUser = nickname;
+    }
+});
 
-    sendButton.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
+sendBtn.addEventListener('click', sendMessage);
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
 
-    uploadButton.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileUpload);
+uploadBtn.addEventListener('click', () => imageUpload.click());
+imageUpload.addEventListener('change', handleImageUpload);
 
-    function sendMessage() {
-        const message = chatInput.value.trim();
-        if (message.startsWith('/name ')) {
-            const newNickname = message.slice(6).trim();
-            socket.emit('changeName', { oldName: nickname, newName: newNickname });
-            nickname = newNickname;
-        } else if (message) {
-            socket.emit('talk', { user: nickname, text: message });
-            speakMessage(message);
+function sendMessage() {
+    const text = chatInput.value.trim();
+    if (text) {
+        if (text.startsWith('/')) {
+            handleCommand(text);
+        } else {
+            socket.emit('talk', { text });
         }
         chatInput.value = '';
     }
+}
 
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                socket.emit('uploadImage', { user: nickname, image: e.target.result });
-            };
-            reader.readAsDataURL(file);
+function handleCommand(command) {
+    const [cmd, ...args] = command.slice(1).split(' ');
+    switch (cmd) {
+        case 'name':
+            socket.emit('changeName', { newName: args.join(' ') });
+            break;
+        case 'image':
+            addImage(args[0]);
+            break;
+        case 'asshole':
+            if (args[0]) socket.emit('asshole', { target: args[0] });
+            break;
+        case 'owo':
+            if (args[0]) socket.emit('owo', { target: args[0] });
+            break;
+    }
+}
+
+function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            addImage(event.target.result);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function addImage(url) {
+    const img = new Image();
+    img.src = url;
+    img.style.maxWidth = '200px';
+    img.style.maxHeight = '200px';
+    bonzis[currentUser].speechBubble.innerHTML = '';
+    bonzis[currentUser].speechBubble.appendChild(img);
+    socket.emit('talk', { text: `[Image: ${url}]` });
+}
+
+class Bonzi {
+    constructor(user, isAdmin = false) {
+        this.user = user;
+        this.element = document.createElement('div');
+        this.element.className = 'bonzi';
+        this.element.style.left = `${Math.random() * (window.innerWidth - 200)}px`;
+        this.element.style.top = `${Math.random() * (window.innerHeight - 190)}px`;
+
+        this.sprite = new Image();
+        this.sprite.src = 'https://bonziworld.org/img/agents/purple.png';
+        this.sprite.width = 200;
+        this.sprite.height = 160;
+
+        this.nameBubble = document.createElement('div');
+        this.nameBubble.className = 'nameBubble';
+        this.nameBubble.textContent = user;
+        if (isAdmin) {
+            const adminTag = document.createElement('span');
+            adminTag.className = 'adminTag';
+            adminTag.textContent = 'Admin';
+            this.nameBubble.appendChild(adminTag);
         }
+
+        this.speechBubble = document.createElement('div');
+        this.speechBubble.className = 'speechBubble';
+        this.speechBubble.style.display = 'none';
+
+        this.element.appendChild(this.sprite);
+        this.element.appendChild(this.nameBubble);
+        this.element.appendChild(this.speechBubble);
+
+        bonziWorld.appendChild(this.element);
+        this.makeDraggable();
     }
 
-    function speakMessage(text) {
+    makeDraggable() {
+        let isDragging = false;
+        let startX, startY;
+
+        this.element.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - this.element.offsetLeft;
+            startY = e.clientY - this.element.offsetTop;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                this.element.style.left = `${e.clientX - startX}px`;
+                this.element.style.top = `${e.clientY - startY}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    }
+
+    speak(text) {
+        this.speechBubble.textContent = text;
+        this.speechBubble.style.display = 'block';
+        setTimeout(() => {
+            this.speechBubble.style.display = 'none';
+        }, 5000);
+
+        // Text-to-speech
         const url = `https://www.tetyys.com/SAPI4/SAPI4?text=${encodeURIComponent(text)}&voice=${encodeURIComponent("Adult Male #2, American English (TruVoice)")}&pitch=140&speed=157`;
         const audio = new Audio(url);
         audio.play();
     }
 
-    function createClippy(user) {
-        const clippy = document.createElement('div');
-        clippy.className = 'clippy';
-        clippy.style.left = `${Math.random() * (window.innerWidth - 124)}px`;
-        clippy.style.top = `${Math.random() * (window.innerHeight - 93)}px`;
-
-        const sprite = new createjs.SpriteSheet({
-            images: ["https://bonziworld.org/img/agents/clippy.png"],
-            frames: { width: 124, height: 93 },
-            animations: {
-                idle: 0,
-                enter: [410, 416, "idle", 0.25],
-                leave: {
-                    frames: [0].concat([...Array(48).keys()].map(i => i + 364)),
-                    speed: 0.25
-                }
-            }
-        });
-
-        const animation = new createjs.Sprite(sprite, "enter");
-        const stage = new createjs.Stage(document.createElement('canvas'));
-        stage.canvas.width = 124;
-        stage.canvas.height = 93;
-        stage.addChild(animation);
-        clippy.appendChild(stage.canvas);
-
-        const nameTag = document.createElement('div');
-        nameTag.className = 'name-tag';
-        nameTag.textContent = user;
-        if (isAdmin) nameTag.innerHTML += '<span class="admin-tag">Admin</span>';
-        clippy.appendChild(nameTag);
-
-        const speechBubble = document.createElement('div');
-        speechBubble.className = 'speech-bubble';
-        speechBubble.style.display = 'none';
-        clippy.appendChild(speechBubble);
-
-        document.body.appendChild(clippy);
-        clippies[user] = { element: clippy, animation, stage, speechBubble };
-
-        makeDraggable(clippy);
-        createjs.Ticker.addEventListener("tick", stage);
+    asshole(target) {
+        this.speak(`Hey, ${target}! You're a fucking asshole!`);
     }
 
-    function makeDraggable(element) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        element.onmousedown = dragMouseDown;
+    owo(target) {
+        this.speak(`*notices ${target}'s BonziBulge™* owo, wat dis?`);
+    }
+}
 
-        function dragMouseDown(e) {
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
+socket.on('join', (user) => {
+    bonzis[user.nickname] = new Bonzi(user.nickname, user.isAdmin);
+});
 
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
-        }
+socket.on('leave', (id) => {
+    if (bonzis[id]) {
+        bonzis[id].element.remove();
+        delete bonzis[id];
+    }
+});
 
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
+socket.on('talk', ({ user, text }) => {
+    if (bonzis[user]) {
+        bonzis[user].speak(text);
+    }
+});
+
+socket.on('update', (user) => {
+    if (bonzis[user.oldNickname]) {
+        bonzis[user.nickname] = bonzis[user.oldNickname];
+        bonzis[user.nickname].user = user.nickname;
+        bonzis[user.nickname].nameBubble.textContent = user.nickname;
+        delete bonzis[user.oldNickname];
+    }
+});
+
+socket.on('asshole', ({ user, target }) => {
+    if (bonzis[user]) {
+        bonzis[user].asshole(target);
+    }
+});
+
+socket.on('owo', ({ user, target }) => {
+    if (bonzis[user]) {
+        bonzis[user].owo(target);
+    }
+});
+
+// Context menu
+document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const contextMenu = document.createElement('div');
+    contextMenu.className = 'window';
+    contextMenu.style.position = 'absolute';
+    contextMenu.style.left = `${e.clientX}px`;
+    contextMenu.style.top = `${e.clientY}px`;
+    contextMenu.style.zIndex = '1000';
+
+    const menuItems = [
+        { text: 'Call an asshole', action: () => socket.emit('asshole', { target: currentUser }) },
+        { text: 'Notice bulge', action: () => socket.emit('owo', { target: currentUser }) },
+    ];
+
+    if (isAdmin) {
+        menuItems.push({ text: 'Kick user', action: () => socket.emit('kickUser', { user: currentUser }) });
     }
 
-    function showSpeechBubble(user, content) {
-        const clippy = clippies[user];
-        if (clippy) {
-            clippy.speechBubble.innerHTML = content;
-            clippy.speechBubble.style.display = 'block';
-            setTimeout(() => {
-                clippy.speechBubble.style.display = 'none';
-            }, 5000);
+    menuItems.forEach(item => {
+        const button = document.createElement('button');
+        button.className = 'win98-button';
+        button.textContent = item.text;
+        button.onclick = () => {
+            item.action();
+            contextMenu.remove();
+        };
+        contextMenu.appendChild(button);
+    });
+
+    document.body.appendChild(contextMenu);
+
+    const removeMenu = (e) => {
+        if (!contextMenu.contains(e.target)) {
+            contextMenu.remove();
+            document.removeEventListener('click', removeMenu);
         }
-    }
+    };
 
-    socket.on('join', (data) => {
-        createClippy(data.user);
-        clippies[data.user].animation.gotoAndPlay("enter");
-    });
+    document.addEventListener('click', removeMenu);
+});
 
-    socket.on('leave', (id) => {
-        if (clippies[id]) {
-            clippies[id].animation.gotoAndPlay("leave");
-            setTimeout(() => {
-                clippies[id].element.remove();
-                delete clippies[id];
-            }, 2000);
-        }
-    });
-
-    socket.on('update', (data) => {
-        if (clippies[data.oldName]) {
-            const clippy = clippies[data.oldName];
-            delete clippies[data.oldName];
-            clippies[data.newName] = clippy;
-            clippy.element.querySelector('.name-tag').textContent = data.newName;
-        }
-    });
-
-    socket.on('talk', (data) => {
-        showSpeechBubble(data.user, data.text);
-        speakMessage(data.text);
-    });
-
-    socket.on('uploadImage', (data) => {
-        const imageElement = document.createElement('img');
-        imageElement.src = data.image;
-        imageElement.className = 'shared-image';
-        imageElement.alt = `Image shared by ${data.user}`;
-        showSpeechBubble(data.user, 'Shared an image!');
-        clippies[data.user].speechBubble.appendChild(imageElement);
-    });
-
-    // Context menu for admin actions
-    document.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (isAdmin) {
-            const contextMenu = document.createElement('div');
-            contextMenu.className = 'window';
-            contextMenu.style.position = 'absolute';
-            contextMenu.style.left = `${e.clientX}px`;
-            contextMenu.style.top = `${e.clientY}px`;
-            contextMenu.style.zIndex = '2000';
-
-            const kickButton = document.createElement('button');
-            kickButton.textContent = 'Kick User';
-            kickButton.onclick = () => {
-                const user = prompt('Enter username to kick:');
-                if (user) socket.emit('kickUser', { user });
-                document.body.removeChild(contextMenu);
-            };
-
-            const banButton = document.createElement('button');
-            banButton.textContent = 'Ban User';
-            banButton.onclick = () => {
-                const user = prompt('Enter username to ban:');
-                const reason = prompt('Enter ban reason:');
-                const length = prompt('Enter ban length (in minutes):');
-                if (user && reason && length) {
-                    socket.emit('banUser', { user, reason, length });
-                }
-                document.body.removeChild(contextMenu);
-            };
-
-            const muteButton = document.createElement('button');
-            muteButton.textContent = 'Mute User';
-            muteButton.onclick = () => {
-                const user = prompt('Enter username to mute:');
-                if (user) socket.emit('muteUser', { user });
-                document.body.removeChild(contextMenu);
-            };
-
-            contextMenu.appendChild(kickButton);
-            contextMenu.appendChild(banButton);
-            contextMenu.appendChild(muteButton);
-            document.body.appendChild(contextMenu);
-
-            const closeContextMenu = (e) => {
-                if (!contextMenu.contains(e.target)) {
-                    document.body.removeChild(contextMenu);
-                    document.removeEventListener('click', closeContextMenu);
-                }
-            };
-            document.addEventListener('click', closeContextMenu);
-        }
-    });
-
-    // Clipboard paste handling
-    document.addEventListener('paste', (e) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    socket.emit('uploadImage', { user: nickname, image: event.target.result });
-                };
-                reader.readAsDataURL(blob);
-            }
-        }
-    });
+// Initialize
+loginModal.style.display = 'block';
 </script>
-</body></html>
+</body>
+</html>
