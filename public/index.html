@@ -1,328 +1,374 @@
-<html><head>
-<title>ClippyChat - Mobile 98 Style</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<html><head><base href="https://example.com/clippychat/">
+<meta charset="UTF-8">
+<title>ClippyChat - Windows 98 Style</title>
 <link rel="stylesheet" href="https://unpkg.com/98.css">
 <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
 <style>
-  body, html {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    font-family: "Pixelated MS Sans Serif", Arial;
-    touch-action: none;
-    background-color: #008080;
-  }
-  #chatContainer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 10px;
-    background-color: #c0c0c0;
-    border-top: 2px solid #fff;
-    box-shadow: inset 1px 1px #dfdfdf, 1px 0 #000, 0 1px #000, 1px 1px #000;
-    z-index: 1000;
-  }
-  #chatInput {
-    width: calc(100% - 140px);
-    margin-right: 10px;
-  }
-  .clippy {
-    position: absolute;
-    touch-action: none;
-    z-index: 10;
-  }
-  .speech-bubble {
-    position: absolute;
-    background: #fff;
-    border: 2px solid #000;
-    border-radius: 10px;
-    padding: 10px;
-    max-width: 200px;
-    z-index: 1000;
-    touch-action: none;
-  }
-  .speech-bubble:after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border: 20px solid transparent;
-    border-top-color: #fff;
-    border-bottom: 0;
-    margin-left: -20px;
-    margin-bottom: -20px;
-  }
-  .name-tag {
-    position: absolute;
-    background: #000080;
-    color: #fff;
-    padding: 2px 5px;
-    border-radius: 3px;
-    font-size: 12px;
-    z-index: 1001;
-    touch-action: none;
-  }
-  #tileButton {
-    width: 50px;
-    height: 50px;
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 1002;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABaklEQVR4nO2ZQUrDQBhGv4LgQhFcegYv4EIUXHsKN/UAIohX8BAiuHXjBVx7A6HgUnTlQiiiCzdWUEHs4v9hAqVYbGomk5n4HgykpZN5Hy0zm46AEOLPAE1gDEyBOfAK3AIDYMv7egQOgTFw7wE8ADfAJdAXkcHRBy6AB+DBg3gDdkW0OEyFrjMT4ejcAPtGRACZtbjRuR94TUkh1L7bUQkxcwO0SjO7/wFGJTS7KvAEnAM7RjBL0AzwCOwWDqIMGQA94Nb9nQFNEyC5kPMw6+QKcrZN2vTuDGg4J8AzMDEBki7WeeZm6Jv0nWsz23/TKwJGO9/MvQ7gTTtGKT2fQY6BJxMwITGdPGE0i+6cZqrA1OYF0Qa+lBeF2Zb+QuwTYo8Qe4TYI8QeIfYIsUeIPULsEWKPEHuE2CPEnhBCxsBOxe9zq/5tDDGvgK9VuE5FrVaIWQe+K3Bd7StzSEhJPbYUYkIIUQo/++B+Vl/Ic4YAAAAASUVORK5CYII=');
-    background-size: cover;
-    border: none;
-    cursor: pointer;
-  }
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: "MS Sans Serif", Arial, sans-serif;
+        background-image: url('https://i.imgur.com/vDuGhj1.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    #chatContainer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: rgba(192, 192, 192, 0.8);
+        border-top: 2px solid #fff;
+        border-bottom: 2px solid #000;
+        padding: 5px;
+    }
+    #chatInput {
+        width: calc(100% - 200px);
+        margin-right: 5px;
+    }
+    #sendButton, #uploadButton {
+        width: 90px;
+    }
+    .clippy {
+        position: absolute;
+        cursor: move;
+    }
+    .speech-bubble {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.9);
+        border: 2px solid #000;
+        border-radius: 10px;
+        padding: 10px;
+        max-width: 200px;
+        z-index: 1000;
+    }
+    .speech-bubble:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border: 20px solid transparent;
+        border-top-color: rgba(255, 255, 255, 0.9);
+        border-bottom: 0;
+        margin-left: -20px;
+        margin-bottom: -20px;
+    }
+    .name-tag {
+        position: absolute;
+        background: rgba(0, 0, 128, 0.8);
+        color: #fff;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+        z-index: 1001;
+    }
+    .admin-tag {
+        background: rgba(128, 0, 0, 0.8);
+        margin-left: 5px;
+    }
+    #loginWindow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2000;
+    }
+    #uploadButton {
+        margin-left: 5px;
+    }
+    .shared-image {
+        max-width: 150px;
+        max-height: 150px;
+        display: block;
+        margin: 5px 0;
+    }
 </style>
 </head>
 <body>
-<div id="loginWindow" class="window" style="width: 90%; max-width: 300px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-  <div class="title-bar">
-    <div class="title-bar-text">Login to ClippyChat</div>
-  </div>
-  <div class="window-body">
-    <p>Enter your nickname and room ID to join:</p>
-    <div class="field-row">
-      <label for="nickname">Nickname:</label>
-      <input id="nickname" type="text">
+<div id="loginWindow" class="window">
+    <div class="title-bar">
+        <div class="title-bar-text">Login to ClippyChat</div>
     </div>
-    <div class="field-row">
-      <label for="roomId">Room ID:</label>
-      <input id="roomId" type="text" value="default">
+    <div class="window-body">
+        <p>Enter your nickname and room ID to join:</p>
+        <div class="field-row">
+            <label for="nicknameInput">Nickname:</label>
+            <input id="nicknameInput" type="text">
+        </div>
+        <div class="field-row">
+            <label for="roomInput">Room ID:</label>
+            <input id="roomInput" type="text">
+        </div>
+        <div class="field-row">
+            <button id="loginButton">Join Chat</button>
+        </div>
     </div>
-    <div class="field-row" style="justify-content: flex-end;">
-      <button id="loginButton">Join Chat</button>
-    </div>
-  </div>
 </div>
 
-<button id="tileButton"></button>
-
-<div id="chatContainer" style="display: none;">
-  <input type="text" id="chatInput" class="input">
-  <button id="sendButton">Send</button>
+<div id="chatContainer">
+    <input type="text" id="chatInput" class="input-text">
+    <button id="sendButton">Send</button>
+    <button id="uploadButton">Upload</button>
+    <input type="file" id="fileInput" style="display: none;" accept="image/*">
 </div>
 
 <script>
-const socket = io();
-let clippyInstances = {};
-let currentUser = '';
-let currentRoom = '';
-let stage;
-const CHAT_HEIGHT = 60;
-const CLIPPY_WIDTH = 124;
-const CLIPPY_HEIGHT = 93;
+    const socket = io();
+    let nickname = '';
+    let roomId = '';
+    let isAdmin = false;
+    const clippies = {};
 
-function randomPosition() {
-  return {
-    x: Math.random() * (window.innerWidth - CLIPPY_WIDTH),
-    y: Math.random() * (window.innerHeight - CLIPPY_HEIGHT - CHAT_HEIGHT)
-  };
-}
+    const loginButton = document.getElementById('loginButton');
+    const nicknameInput = document.getElementById('nicknameInput');
+    const roomInput = document.getElementById('roomInput');
+    const loginWindow = document.getElementById('loginWindow');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
+    const uploadButton = document.getElementById('uploadButton');
+    const fileInput = document.getElementById('fileInput');
 
-function tileClippys() {
-  const clippyArray = Object.values(clippyInstances);
-  const availableWidth = window.innerWidth;
-  const availableHeight = window.innerHeight - CHAT_HEIGHT;
-  const cols = Math.floor(availableWidth / CLIPPY_WIDTH);
-  const rows = Math.ceil(clippyArray.length / cols);
-
-  clippyArray.forEach((clippy, index) => {
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    const x = col * CLIPPY_WIDTH;
-    const y = row * CLIPPY_HEIGHT;
-
-    createjs.Tween.get(clippy.clippy)
-      .to({x: x, y: y}, 500, createjs.Ease.quadOut);
-    
-    clippy.nameTag.style.transition = 'all 0.5s ease-out';
-    clippy.nameTag.style.left = `${x}px`;
-    clippy.nameTag.style.top = `${y - 20}px`;
-    
-    clippy.updateSpeechBubblePosition();
-  });
-}
-
-function createClippy(user, position) {
-  const spriteSheet = new createjs.SpriteSheet({
-    images: ["https://bonziworld.org/img/agents/clippy.png"],
-    frames: {width: CLIPPY_WIDTH, height: CLIPPY_HEIGHT},
-    animations: {
-      idle: 0,
-      enter: {
-        frames: [410, 411, 412, 413, 414, 415, 416, 0],
-        next: "idle"
-      },
-      leave: {
-        frames: [0, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411],
-        next: false
-      }
-    }
-  });
-
-  const clippy = new createjs.Sprite(spriteSheet, "idle");
-  clippy.x = position.x;
-  clippy.y = position.y;
-
-  const nameTag = document.createElement('div');
-  nameTag.className = 'name-tag';
-  nameTag.textContent = user;
-  nameTag.style.left = `${position.x}px`;
-  nameTag.style.top = `${position.y - 20}px`;
-  document.body.appendChild(nameTag);
-
-  const speechBubble = document.createElement('div');
-  speechBubble.className = 'speech-bubble';
-  speechBubble.style.display = 'none';
-  document.body.appendChild(speechBubble);
-
-  function updateSpeechBubblePosition() {
-    speechBubble.style.left = `${clippy.x - 100}px`;
-    speechBubble.style.top = `${clippy.y - 150}px`;
-  }
-
-  function speak(text) {
-    speechBubble.textContent = text;
-    speechBubble.style.display = 'block';
-    updateSpeechBubblePosition();
-    setTimeout(() => {
-      speechBubble.style.display = 'none';
-    }, 3000);
-
-    const url = `https://www.tetyys.com/SAPI4/SAPI4?text=${encodeURIComponent(text)}&voice=${encodeURIComponent("Adult Male #2, American English (TruVoice)")}&pitch=140&speed=157`;
-    const audio = new Audio(url);
-    audio.play();
-  }
-
-  let isDragging = false;
-  let startX, startY;
-
-  clippy.on('mousedown', startDrag);
-  clippy.on('pressmove', drag);
-  clippy.on('pressup', endDrag);
-
-  clippy.on('touchstart', startDrag);
-  clippy.on('touchmove', drag);
-  clippy.on('touchend', endDrag);
-
-  function startDrag(event) {
-    isDragging = true;
-    startX = event.stageX - clippy.x;
-    startY = event.stageY - clippy.y;
-  }
-
-  function drag(event) {
-    if (isDragging) {
-      clippy.x = Math.max(0, Math.min(event.stageX - startX, window.innerWidth - CLIPPY_WIDTH));
-      clippy.y = Math.max(0, Math.min(event.stageY - startY, window.innerHeight - CLIPPY_HEIGHT - CHAT_HEIGHT));
-      nameTag.style.left = `${clippy.x}px`;
-      nameTag.style.top = `${clippy.y - 20}px`;
-      updateSpeechBubblePosition();
-    }
-  }
-
-  function endDrag() {
-    isDragging = false;
-  }
-
-  stage.addChild(clippy);
-
-  return {
-    clippy,
-    nameTag,
-    speechBubble,
-    speak,
-    updateSpeechBubblePosition
-  };
-}
-
-document.getElementById('loginButton').addEventListener('click', () => {
-  currentUser = document.getElementById('nickname').value;
-  currentRoom = document.getElementById('roomId').value || 'default';
-  if (currentUser && currentRoom) {
-    socket.emit('join', { user: currentUser, room: currentRoom });
-    document.getElementById('loginWindow').style.display = 'none';
-    document.getElementById('chatContainer').style.display = 'flex';
-    const canvas = document.createElement('canvas');
-    canvas.id = 'clippyCanvas';
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - CHAT_HEIGHT;
-    document.body.insertBefore(canvas, document.body.firstChild);
-    stage = new createjs.Stage("clippyCanvas");
-    createjs.Touch.enable(stage);
-    createjs.Ticker.framerate = 30;
-    createjs.Ticker.addEventListener("tick", stage);
-    
-    const position = randomPosition();
-    clippyInstances[currentUser] = createClippy(currentUser, position);
-    clippyInstances[currentUser].clippy.gotoAndPlay("enter");
-  }
-});
-
-socket.on('join', (user) => {
-  if (user !== currentUser) {
-    const position = randomPosition();
-    clippyInstances[user] = createClippy(user, position);
-    clippyInstances[user].clippy.gotoAndPlay("enter");
-  }
-});
-
-socket.on('leave', (id) => {
-  if (clippyInstances[id]) {
-    clippyInstances[id].clippy.gotoAndPlay("leave");
-    clippyInstances[id].clippy.on("animationend", function() {
-      stage.removeChild(clippyInstances[id].clippy);
-      clippyInstances[id].nameTag.remove();
-      clippyInstances[id].speechBubble.remove();
-      delete clippyInstances[id];
+    loginButton.addEventListener('click', () => {
+        nickname = nicknameInput.value.trim();
+        roomId = roomInput.value.trim();
+        if (nickname && roomId) {
+            socket.emit('join', { user: nickname, room: roomId });
+            loginWindow.style.display = 'none';
+        }
     });
-  }
-});
 
-socket.on('talk', (data) => {
-  if (clippyInstances[data.user]) {
-    clippyInstances[data.user].speak(data.text);
-  }
-});
+    sendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
 
-document.getElementById('sendButton').addEventListener('click', sendMessage);
-document.getElementById('chatInput').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') sendMessage();
-});
+    uploadButton.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileUpload);
 
-function sendMessage() {
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if (text) {
-    if (text.startsWith('/name ')) {
-      const newName = text.slice(6).trim();
-      socket.emit('update', { oldName: currentUser, newName: newName });
-      currentUser = newName;
-    } else {
-      socket.emit('talk', { user: currentUser, text: text });
-      if (clippyInstances[currentUser]) {
-        clippyInstances[currentUser].speak(text);
-      }
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (message.startsWith('/name ')) {
+            const newNickname = message.slice(6).trim();
+            socket.emit('changeName', { oldName: nickname, newName: newNickname });
+            nickname = newNickname;
+        } else if (message) {
+            socket.emit('talk', { user: nickname, text: message });
+            speakMessage(message);
+        }
+        chatInput.value = '';
     }
-    input.value = '';
-  }
-}
 
-window.addEventListener('resize', () => {
-  if (stage) {
-    stage.canvas.width = window.innerWidth;
-    stage.canvas.height = window.innerHeight - CHAT_HEIGHT;
-  }
-});
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                socket.emit('uploadImage', { user: nickname, image: e.target.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    }
 
-document.getElementById('tileButton').addEventListener('click', tileClippys);
+    function speakMessage(text) {
+        const url = `https://www.tetyys.com/SAPI4/SAPI4?text=${encodeURIComponent(text)}&voice=${encodeURIComponent("Adult Male #2, American English (TruVoice)")}&pitch=140&speed=157`;
+        const audio = new Audio(url);
+        audio.play();
+    }
 
+    function createClippy(user) {
+        const clippy = document.createElement('div');
+        clippy.className = 'clippy';
+        clippy.style.left = `${Math.random() * (window.innerWidth - 124)}px`;
+        clippy.style.top = `${Math.random() * (window.innerHeight - 93)}px`;
+
+        const sprite = new createjs.SpriteSheet({
+            images: ["https://bonziworld.org/img/agents/clippy.png"],
+            frames: { width: 124, height: 93 },
+            animations: {
+                idle: 0,
+                enter: [410, 416, "idle", 0.25],
+                leave: {
+                    frames: [0].concat([...Array(48).keys()].map(i => i + 364)),
+                    speed: 0.25
+                }
+            }
+        });
+
+        const animation = new createjs.Sprite(sprite, "enter");
+        const stage = new createjs.Stage(document.createElement('canvas'));
+        stage.canvas.width = 124;
+        stage.canvas.height = 93;
+        stage.addChild(animation);
+        clippy.appendChild(stage.canvas);
+
+        const nameTag = document.createElement('div');
+        nameTag.className = 'name-tag';
+        nameTag.textContent = user;
+        if (isAdmin) nameTag.innerHTML += '<span class="admin-tag">Admin</span>';
+        clippy.appendChild(nameTag);
+
+        const speechBubble = document.createElement('div');
+        speechBubble.className = 'speech-bubble';
+        speechBubble.style.display = 'none';
+        clippy.appendChild(speechBubble);
+
+        document.body.appendChild(clippy);
+        clippies[user] = { element: clippy, animation, stage, speechBubble };
+
+        makeDraggable(clippy);
+        createjs.Ticker.addEventListener("tick", stage);
+    }
+
+    function makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        element.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    function showSpeechBubble(user, content) {
+        const clippy = clippies[user];
+        if (clippy) {
+            clippy.speechBubble.innerHTML = content;
+            clippy.speechBubble.style.display = 'block';
+            setTimeout(() => {
+                clippy.speechBubble.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    socket.on('join', (data) => {
+        createClippy(data.user);
+        clippies[data.user].animation.gotoAndPlay("enter");
+    });
+
+    socket.on('leave', (id) => {
+        if (clippies[id]) {
+            clippies[id].animation.gotoAndPlay("leave");
+            setTimeout(() => {
+                clippies[id].element.remove();
+                delete clippies[id];
+            }, 2000);
+        }
+    });
+
+    socket.on('update', (data) => {
+        if (clippies[data.oldName]) {
+            const clippy = clippies[data.oldName];
+            delete clippies[data.oldName];
+            clippies[data.newName] = clippy;
+            clippy.element.querySelector('.name-tag').textContent = data.newName;
+        }
+    });
+
+    socket.on('talk', (data) => {
+        showSpeechBubble(data.user, data.text);
+        speakMessage(data.text);
+    });
+
+    socket.on('uploadImage', (data) => {
+        const imageElement = document.createElement('img');
+        imageElement.src = data.image;
+        imageElement.className = 'shared-image';
+        imageElement.alt = `Image shared by ${data.user}`;
+        showSpeechBubble(data.user, 'Shared an image!');
+        clippies[data.user].speechBubble.appendChild(imageElement);
+    });
+
+    // Context menu for admin actions
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (isAdmin) {
+            const contextMenu = document.createElement('div');
+            contextMenu.className = 'window';
+            contextMenu.style.position = 'absolute';
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.top = `${e.clientY}px`;
+            contextMenu.style.zIndex = '2000';
+
+            const kickButton = document.createElement('button');
+            kickButton.textContent = 'Kick User';
+            kickButton.onclick = () => {
+                const user = prompt('Enter username to kick:');
+                if (user) socket.emit('kickUser', { user });
+                document.body.removeChild(contextMenu);
+            };
+
+            const banButton = document.createElement('button');
+            banButton.textContent = 'Ban User';
+            banButton.onclick = () => {
+                const user = prompt('Enter username to ban:');
+                const reason = prompt('Enter ban reason:');
+                const length = prompt('Enter ban length (in minutes):');
+                if (user && reason && length) {
+                    socket.emit('banUser', { user, reason, length });
+                }
+                document.body.removeChild(contextMenu);
+            };
+
+            const muteButton = document.createElement('button');
+            muteButton.textContent = 'Mute User';
+            muteButton.onclick = () => {
+                const user = prompt('Enter username to mute:');
+                if (user) socket.emit('muteUser', { user });
+                document.body.removeChild(contextMenu);
+            };
+
+            contextMenu.appendChild(kickButton);
+            contextMenu.appendChild(banButton);
+            contextMenu.appendChild(muteButton);
+            document.body.appendChild(contextMenu);
+
+            const closeContextMenu = (e) => {
+                if (!contextMenu.contains(e.target)) {
+                    document.body.removeChild(contextMenu);
+                    document.removeEventListener('click', closeContextMenu);
+                }
+            };
+            document.addEventListener('click', closeContextMenu);
+        }
+    });
+
+    // Clipboard paste handling
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    socket.emit('uploadImage', { user: nickname, image: event.target.result });
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
 </script>
-</body>
-</html>
+</body></html>
