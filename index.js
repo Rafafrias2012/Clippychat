@@ -1,47 +1,84 @@
 const express = require('express');
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+const path = require('path');
 
-let users = {};
+const PORT = process.env.PORT || 3000;
 
-app.use(express.static('public'));
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+// Store room information
+const rooms = {};
 
 io.on('connection', (socket) => {
-  console.log('a user connected');
+  let currentUser = null;
+  let currentRoom = null;
 
-  socket.on('join', ({ user, room }) => {
-    users[user.id] = user;
-    socket.join(room);
-    io.in(room).emit('join', user);
+  socket.on('join', (data) => {
+    currentUser = data.user;
+    currentRoom = data.room;
+
+    socket.join(currentRoom);
+
+    if (!rooms[currentRoom]) {
+      rooms[currentRoom] = { users: {} };
+    }
+
+    rooms[currentRoom].users[socket.id] = { name: currentUser, isAdmin: Object.keys(rooms[currentRoom].users).length === 0 };
+
+    socket.emit('joined', { user: currentUser });
+    socket.emit('adminStatus', rooms[currentRoom].users[socket.id].isAdmin);
+    socket.to(currentRoom).emit('userJoined', { user: currentUser });
   });
 
-  socket.on('talk', ({ user, text }) => {
-    io.in(user.room).emit('talk', { user, text });
+  socket.on('chat', (data) => {
+    io.to(currentRoom).emit('chat', { user: currentUser, text: data.text });
   });
 
-  socket.on('updateUser', (user) => {
-    users[user.id] = user;
-    io.in(user.room).emit('update', user);
+  socket.on('changeName', (data) => {
+    const oldName = currentUser;
+    currentUser = data.newName;
+    rooms[currentRoom].users[socket.id].name = currentUser;
+    io.to(currentRoom).emit('nameChanged', { oldName: oldName, newName: currentUser });
   });
 
-  socket.on('kickUser', (id) => {
-    const user = users[id];
-    if (user) {
-      io.in(user.room).emit('leave', id);
-      delete users[id];
+  socket.on('changeColor', (data) => {
+    io.to(currentRoom).emit('colorChanged', { user: currentUser, color: data.color });
+  });
+
+  socket.on('sendImage', (data) => {
+    io.to(currentRoom).emit('imageMessage', { user: currentUser, url: data.url });
+  });
+
+  socket.on('kickUser', (data) => {
+    if (rooms[currentRoom].users[socket.id].isAdmin) {
+      const userToKick = Object.keys(rooms[currentRoom].users).find(id => rooms[currentRoom].users[id].name === data.user);
+      if (userToKick) {
+        io.to(userToKick).emit('kicked');
+        io.sockets.sockets.get(userToKick).disconnect();
+      }
     }
   });
 
   socket.on('disconnect', () => {
-    console.log('a user disconnected');
+    if (currentRoom && rooms[currentRoom]) {
+      delete rooms[currentRoom].users[socket.id];
+      io.to(currentRoom).emit('userLeft', { id: currentUser });
+
+      if (Object.keys(rooms[currentRoom].users).length === 0) {
+        delete rooms[currentRoom];
+      } else if (rooms[currentRoom].users[socket.id]?.isAdmin) {
+        // Assign admin status to the next user
+        const nextAdmin = Object.keys(rooms[currentRoom].users)[0];
+        rooms[currentRoom].users[nextAdmin].isAdmin = true;
+        io.to(nextAdmin).emit('adminStatus', true);
+      }
+    }
   });
 });
 
-server.listen(3000, () => {
-  console.log('Server started on port 3000');
+http.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
