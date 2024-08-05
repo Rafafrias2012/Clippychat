@@ -1,202 +1,192 @@
-<html><head><base href="https://example.com/">
-  <title>BonziChat</title>
-  <link rel="stylesheet" href="https://unpkg.com/98.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
-  <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      font-family: "MS Sans Serif", Arial, sans-serif;
-    }
-    #desktop {
-      width: 100%;
-      height: 100%;
-      background: #008080;
-      position: relative;
-    }
-    #chatbar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #c0c0c0;
-      padding: 5px;
-      display: flex;
-    }
-    #chatInput {
-      flex-grow: 1;
-      margin-right: 5px;
-    }
-    #sendBtn, #uploadBtn {
-      width: 70px;
-    }
-    .bonzi {
-      position: absolute;
-      width: 200px;
-      height: 160px;
-      cursor: move;
-    }
-    .speech-bubble, .name-bubble {
-      position: absolute;
-      background: #fff;
-      border: 2px solid #000;
-      border-radius: 10px;
-      padding: 5px;
-      max-width: 200px;
-      word-wrap: break-word;
-    }
-    .speech-bubble {
-      top: -80px;
-      left: 50px;
-    }
-    .name-bubble {
-      top: -30px;
-      left: 50px;
-    }
-    .admin-tag {
-      background: #ff0;
-      color: #000;
-      padding: 2px 5px;
-      border-radius: 3px;
-      margin-left: 5px;
-    }
-  </style>
+<html><head><base href="https://webdevgalaxy.com/bonzichat/">
+<title>BonziChat - Windows 98 Style</title>
+<link rel="stylesheet" href="https://unpkg.com/98.css">
+<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+<style>
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: "MS Sans Serif", Arial, sans-serif;
+}
+#chatContainer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background-color: #c0c0c0;
+    border-top: 2px solid #fff;
+    box-shadow: inset 1px 1px #dfdfdf, 1px 0 #000, 0 1px #000, 1px 1px #000;
+}
+#chatInput {
+    width: calc(100% - 80px);
+    height: 30px;
+    margin: 10px;
+}
+#sendButton {
+    width: 60px;
+    height: 30px;
+    vertical-align: top;
+}
+#uploadButton {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+}
+.bonzi {
+    position: absolute;
+    width: 200px;
+    height: 160px;
+    cursor: move;
+}
+.speech-bubble {
+    position: absolute;
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 10px;
+    padding: 10px;
+    max-width: 200px;
+    word-wrap: break-word;
+    display: none;
+}
+.nametag {
+    position: absolute;
+    background: #000080;
+    color: #fff;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+.admin-tag {
+    background: #ff0000;
+    margin-left: 5px;
+}
+#loginWindow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+</style>
 </head>
 <body>
-  <div id="desktop"></div>
-  <div id="chatbar">
-    <input type="text" id="chatInput" class="text-input" placeholder="Type your message...">
-    <button id="sendBtn" class="button">Send</button>
-    <button id="uploadBtn" class="button">Upload</button>
-  </div>
-
-  <div id="loginWindow" class="window" style="width: 300px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+<div id="loginWindow" class="window">
     <div class="title-bar">
-      <div class="title-bar-text">Login</div>
+        <div class="title-bar-text">Login to BonziChat</div>
     </div>
     <div class="window-body">
-      <p>Enter your nickname and room ID to join:</p>
-      <div class="field-row-stacked" style="width: 200px;">
-        <label for="nickname">Nickname:</label>
-        <input id="nickname" type="text" class="text-input">
-      </div>
-      <div class="field-row-stacked" style="width: 200px;">
-        <label for="roomId">Room ID:</label>
-        <input id="roomId" type="text" class="text-input">
-      </div>
-      <div class="field-row" style="justify-content: flex-end;">
-        <button id="loginBtn" class="button">Join</button>
-      </div>
+        <p>Enter your nickname and room ID:</p>
+        <div class="field-row">
+            <label for="nickname">Nickname:</label>
+            <input id="nickname" type="text">
+        </div>
+        <div class="field-row">
+            <label for="roomId">Room ID:</label>
+            <input id="roomId" type="text">
+        </div>
+        <div class="field-row">
+            <button id="loginButton">Login</button>
+        </div>
     </div>
-  </div>
+</div>
 
-  <script>
-    const socket = io();
-    let currentUser = null;
-    let isAdmin = false;
-    const bonziColors = ['purple', 'brown', 'blue', 'black', 'green', 'pink', 'red'];
-    const bonziImages = {
-      purple: 'https://250750.xyz/img/bonzi/purple.png',
-      brown: 'https://250750.xyz/img/bonzi/brown.png',
-      blue: 'https://250750.xyz/img/bonzi/blue.png',
-      black: 'https://250750.xyz/img/bonzi/black.png',
-      green: 'https://250750.xyz/img/bonzi/green.png',
-      pink: 'https://250750.xyz/img/bonzi/pink.png',
-      red: 'https://250750.xyz/img/bonzi/red.png'
-    };
+<div id="chatContainer">
+    <input type="text" id="chatInput" placeholder="Type your message...">
+    <button id="sendButton">Send</button>
+    <button id="uploadButton">Upload</button>
+</div>
 
-    const desktop = document.getElementById('desktop');
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const loginWindow = document.getElementById('loginWindow');
-    const loginBtn = document.getElementById('loginBtn');
+<script>
+const socket = io();
+let myBonzi;
+let bonzis = {};
+let myNickname = '';
+let myColor = '';
+let isAdmin = false;
 
-    loginBtn.addEventListener('click', () => {
-      const nickname = document.getElementById('nickname').value;
-      const roomId = document.getElementById('roomId').value;
-      if (nickname && roomId) {
-        currentUser = { id: Date.now().toString(), name: nickname, color: bonziColors[Math.floor(Math.random() * bonziColors.length)] };
-        socket.emit('join', { user: currentUser, room: roomId });
-        loginWindow.style.display = 'none';
-      }
+const bonziColors = [
+    'purple', 'brown', 'blue', 'black', 'green', 'pink', 'red'
+];
+
+const bonziSprites = {
+    purple: 'https://250750.xyz/img/bonzi/purple.png',
+    brown: 'https://250750.xyz/img/bonzi/brown.png',
+    blue: 'https://250750.xyz/img/bonzi/blue.png',
+    black: 'https://250750.xyz/img/bonzi/black.png',
+    green: 'https://250750.xyz/img/bonzi/green.png',
+    pink: 'https://250750.xyz/img/bonzi/pink.png',
+    red: 'https://250750.xyz/img/bonzi/red.png'
+};
+
+const bonziAnimations = {
+    idle: [0],
+    enter: [277, 302, "idle", 0.25],
+    leave: [16, 39, 40, 0.25]
+};
+
+function createBonzi(id, color, x, y) {
+    const bonziContainer = document.createElement('div');
+    bonziContainer.className = 'bonzi';
+    bonziContainer.style.left = x + 'px';
+    bonziContainer.style.top = y + 'px';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 200;
+    canvas.height = 160;
+    bonziContainer.appendChild(canvas);
+
+    const speechBubble = document.createElement('div');
+    speechBubble.className = 'speech-bubble';
+    bonziContainer.appendChild(speechBubble);
+
+    const nametag = document.createElement('div');
+    nametag.className = 'nametag';
+    nametag.textContent = id;
+    bonziContainer.appendChild(nametag);
+
+    document.body.appendChild(bonziContainer);
+
+    const stage = new createjs.Stage(canvas);
+    const spriteSheet = new createjs.SpriteSheet({
+        images: [bonziSprites[color]],
+        frames: {width: 200, height: 160},
+        animations: bonziAnimations
     });
 
-    function createBonzi(user) {
-      const bonzi = document.createElement('div');
-      bonzi.className = 'bonzi';
-      bonzi.id = `bonzi-${user.id}`;
-      bonzi.style.left = `${Math.random() * (window.innerWidth - 200)}px`;
-      bonzi.style.top = `${Math.random() * (window.innerHeight - 160)}px`;
+    const sprite = new createjs.Sprite(spriteSheet, "idle");
+    stage.addChild(sprite);
+    createjs.Ticker.timingMode = createjs.Ticker.RAF;
+    createjs.Ticker.addEventListener("tick", stage);
 
-      const img = document.createElement('img');
-      img.src = bonziImages[user.color];
-      img.alt = `${user.color} Bonzi buddy`;
-      img.width = 200;
-      img.height = 160;
+    makeDraggable(bonziContainer);
 
-      const nameBubble = document.createElement('div');
-      nameBubble.className = 'name-bubble';
-      nameBubble.textContent = user.name;
-      if (user.isAdmin) {
-        const adminTag = document.createElement('span');
-        adminTag.className = 'admin-tag';
-        adminTag.textContent = 'Admin';
-        nameBubble.appendChild(adminTag);
-      }
+    return {
+        container: bonziContainer,
+        sprite: sprite,
+        speechBubble: speechBubble,
+        nametag: nametag,
+        stage: stage
+    };
+}
 
-      const speechBubble = document.createElement('div');
-      speechBubble.className = 'speech-bubble';
-      speechBubble.style.display = 'none';
+function makeDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    element.onmousedown = dragMouseDown;
 
-      bonzi.appendChild(img);
-      bonzi.appendChild(nameBubble);
-      bonzi.appendChild(speechBubble);
-
-      desktop.appendChild(bonzi);
-
-      makeDraggable(bonzi);
-      setupContextMenu(bonzi, user);
-
-      // Animation
-      const spriteSheet = new createjs.SpriteSheet({
-        images: [bonziImages[user.color]],
-        frames: { width: 200, height: 160 },
-        animations: {
-          idle: 0,
-          enter: [277, 302, "idle", 0.25],
-          leave: [16, 39, 40, 0.25]
-        }
-      });
-
-      const bonziSprite = new createjs.Sprite(spriteSheet, "idle");
-      const stage = new createjs.Stage(bonzi);
-      stage.addChild(bonziSprite);
-      createjs.Ticker.timingMode = createjs.Ticker.RAF;
-      createjs.Ticker.addEventListener("tick", stage);
-
-      bonziSprite.gotoAndPlay("enter");
-
-      return bonzi;
-    }
-
-    function makeDraggable(element) {
-      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-      element.onmousedown = dragMouseDown;
-
-      function dragMouseDown(e) {
+    function dragMouseDown(e) {
         e = e || window.event;
         e.preventDefault();
         pos3 = e.clientX;
         pos4 = e.clientY;
         document.onmouseup = closeDragElement;
         document.onmousemove = elementDrag;
-      }
+    }
 
-      function elementDrag(e) {
+    function elementDrag(e) {
         e = e || window.event;
         e.preventDefault();
         pos1 = pos3 - e.clientX;
@@ -205,232 +195,233 @@
         pos4 = e.clientY;
         element.style.top = (element.offsetTop - pos2) + "px";
         element.style.left = (element.offsetLeft - pos1) + "px";
-      }
+    }
 
-      function closeDragElement() {
+    function closeDragElement() {
         document.onmouseup = null;
         document.onmousemove = null;
-      }
     }
+}
 
-    function setupContextMenu(bonzi, user) {
-      bonzi.oncontextmenu = (e) => {
-        e.preventDefault();
-        const contextMenu = document.createElement('div');
-        contextMenu.className = 'window';
-        contextMenu.style.position = 'absolute';
-        contextMenu.style.left = `${e.clientX}px`;
-        contextMenu.style.top = `${e.clientY}px`;
-        contextMenu.style.zIndex = '1000';
+function speak(bonzi, text) {
+    bonzi.speechBubble.textContent = text;
+    bonzi.speechBubble.style.display = 'block';
+    bonzi.sprite.gotoAndPlay("talk");
 
-        const menuItems = [
-          { text: 'Change Color', action: () => changeColor(user) },
-          { text: 'Change Voice', action: () => changeVoice(user) },
-        ];
+    const url = "https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(text) + "&voice=" + encodeURIComponent("Adult Male #2, American English (TruVoice)") + "&pitch=140&speed=157";
+    const audio = new Audio(url);
+    audio.play();
 
-        if (isAdmin && currentUser.id !== user.id) {
-          menuItems.push({ text: 'Kick User', action: () => kickUser(user) });
-        }
+    setTimeout(() => {
+        bonzi.speechBubble.style.display = 'none';
+        bonzi.sprite.gotoAndPlay("idle");
+    }, text.length * 100);
+}
 
-        menuItems.forEach(item => {
-          const menuItem = document.createElement('button');
-          menuItem.className = 'button';
-          menuItem.textContent = item.text;
-          menuItem.onclick = () => {
-            item.action();
-            document.body.removeChild(contextMenu);
-          };
-          contextMenu.appendChild(menuItem);
-        });
+document.getElementById('loginButton').addEventListener('click', () => {
+    myNickname = document.getElementById('nickname').value;
+    const roomId = document.getElementById('roomId').value;
+    if (myNickname && roomId) {
+        socket.emit('join', { user: myNickname, room: roomId });
+        document.getElementById('loginWindow').style.display = 'none';
+    }
+});
 
-        document.body.appendChild(contextMenu);
+socket.on('joined', (data) => {
+    myColor = bonziColors[Math.floor(Math.random() * bonziColors.length)];
+    myBonzi = createBonzi(data.user, myColor, Math.random() * (window.innerWidth - 200), Math.random() * (window.innerHeight - 260));
+    bonzis[data.user] = myBonzi;
+    myBonzi.sprite.gotoAndPlay("enter");
+});
 
-        const closeMenu = (e) => {
-          if (!contextMenu.contains(e.target)) {
-            document.body.removeChild(contextMenu);
-            document.removeEventListener('click', closeMenu);
-          }
-        };
+socket.on('userJoined', (data) => {
+    const color = bonziColors[Math.floor(Math.random() * bonziColors.length)];
+    const newBonzi = createBonzi(data.user, color, Math.random() * (window.innerWidth - 200), Math.random() * (window.innerHeight - 260));
+    bonzis[data.user] = newBonzi;
+    newBonzi.sprite.gotoAndPlay("enter");
+});
 
+socket.on('userLeft', (data) => {
+    if (bonzis[data.id]) {
+        bonzis[data.id].sprite.gotoAndPlay("leave");
         setTimeout(() => {
-          document.addEventListener('click', closeMenu);
-        }, 0);
-      };
-    }
-
-    function changeColor(user) {
-      const newColor = bonziColors[Math.floor(Math.random() * bonziColors.length)];
-      socket.emit('updateUser', { ...user, color: newColor });
-    }
-
-    function changeVoice(user) {
-      // Implement voice change logic here
-      console.log('Change voice for', user.name);
-    }
-
-    function kickUser(user) {
-      if (isAdmin && currentUser.id !== user.id) {
-        socket.emit('kickUser', user.id);
-      }
-    }
-
-    function speak(bonzi, text) {
-      const speechBubble = bonzi.querySelector('.speech-bubble');
-      speechBubble.textContent = text;
-      speechBubble.style.display = 'block';
-
-      const url = `https://www.tetyys.com/SAPI4/SAPI4?text=${encodeURIComponent(text)}&voice=${encodeURIComponent("Adult Male #2, American English (TruVoice)")}&pitch=140&speed=157`;
-      const audio = new Audio(url);
-      audio.play();
-
-      setTimeout(() => {
-        speechBubble.style.display = 'none';
-      }, text.length * 100);
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    function sendMessage() {
-      const text = chatInput.value.trim();
-      if (text) {
-        if (text.startsWith('/')) {
-          handleCommand(text);
-        } else {
-          socket.emit('talk', { user: currentUser, text });
-        }
-        chatInput.value = '';
-      }
-    }
-
-    function handleCommand(command) {
-      const [cmd, ...args] = command.slice(1).split(' ');
-      switch (cmd.toLowerCase()) {
-        case 'name':
-          if (args.length > 0) {
-            const newName = args.join(' ');
-            socket.emit('updateUser', { ...currentUser, name: newName });
-          }
-          break;
-        case 'color':
-          if (args.length > 0 && bonziColors.includes(args[0])) {
-            socket.emit('updateUser', { ...currentUser, color: args[0] });
-          }
-          break;
-        case 'voice':
-          if (args.length > 0) {
-            // Implement voice change logic here
-            console.log('Changing voice to:', args.join(' '));
-          }
-          break;
-        case 'image':
-          if (args.length > 0) {
-            const imageUrl = args[0];
-            socket.emit('talk', { user: currentUser, text: `[IMG]${imageUrl}[/IMG]` });
-          }
-          break;
-        default:
-          console.log('Unknown command:', cmd);
-      }
-    }
-
-    uploadBtn.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const imageData = event.target.result;
-            socket.emit('talk', { user: currentUser, text: `[IMG]${imageData}[/IMG]` });
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      input.click();
-    });
-
-    document.addEventListener('paste', (e) => {
-      const items = e.clipboardData.items;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const imageData = event.target.result;
-            socket.emit('talk', { user: currentUser, text: `[IMG]${imageData}[/IMG]` });
-          };
-          reader.readAsDataURL(blob);
-        }
-      }
-    });
-
-    socket.on('join', (user) => {
-      createBonzi(user);
-    });
-
-    socket.on('leave', (id) => {
-      const bonzi = document.getElementById(`bonzi-${id}`);
-      if (bonzi) {
-        const sprite = createjs.Sprite.getInstance(bonzi);
-        sprite.gotoAndPlay("leave");
-        setTimeout(() => {
-          desktop.removeChild(bonzi);
+            bonzis[data.id].container.remove();
+            delete bonzis[data.id];
         }, 1000);
-      }
-    });
+    }
+});
 
-    socket.on('update', (user) => {
-      const bonzi = document.getElementById(`bonzi-${user.id}`);
-      if (bonzi) {
-        const img = bonzi.querySelector('img');
-        img.src = bonziImages[user.color];
-        const nameBubble = bonzi.querySelector('.name-bubble');
-        nameBubble.textContent = user.name;
-        if (user.isAdmin) {
-          if (!nameBubble.querySelector('.admin-tag')) {
-            const adminTag = document.createElement('span');
-            adminTag.className = 'admin-tag';
-            adminTag.textContent = 'Admin';
-            nameBubble.appendChild(adminTag);
-          }
+socket.on('chat', (data) => {
+    if (bonzis[data.user]) {
+        speak(bonzis[data.user], data.text);
+    }
+});
+
+document.getElementById('sendButton').addEventListener('click', sendMessage);
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (text) {
+        if (text.startsWith('/')) {
+            handleCommand(text);
         } else {
-          const adminTag = nameBubble.querySelector('.admin-tag');
-          if (adminTag) nameBubble.removeChild(adminTag);
+            socket.emit('chat', { text: text });
         }
-      }
-    });
+        input.value = '';
+    }
+}
 
-    socket.on('talk', ({ user, text }) => {
-      const bonzi = document.getElementById(`bonzi-${user.id}`);
-      if (bonzi) {
-        if (text.startsWith('[IMG]') && text.endsWith('[/IMG]')) {
-          const imageUrl = text.slice(5, -6);
-          const img = document.createElement('img');
-          img.src = imageUrl;
-          img.style.maxWidth = '200px';
-          img.style.maxHeight = '200px';
-          const speechBubble = bonzi.querySelector('.speech-bubble');
-          speechBubble.innerHTML = '';
-          speechBubble.appendChild(img);
-          speechBubble.style.display = 'block';
-          setTimeout(() => {
-            speechBubble.style.display = 'none';
-          }, 5000);
-        } else {
-          speak(bonzi, text);
+function handleCommand(command) {
+    const parts = command.split(' ');
+    switch (parts[0]) {
+        case '/name':
+            if (parts[1]) {
+                socket.emit('changeName', { newName: parts[1] });
+            }
+            break;
+        case '/color':
+            if (parts[1] && bonziColors.includes(parts[1])) {
+                myColor = parts[1];
+                socket.emit('changeColor', { color: myColor });
+            }
+            break;
+        case '/image':
+            if (parts[1]) {
+                socket.emit('sendImage', { url: parts[1] });
+            }
+            break;
+    }
+}
+
+document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (e.target.closest('.bonzi')) {
+        const bonzi = e.target.closest('.bonzi');
+        const user = bonzi.querySelector('.nametag').textContent;
+        if (user !== myNickname) {
+            showContextMenu(e.clientX, e.clientY, user);
         }
-      }
-    });
+    }
+});
 
-    socket.on('kicked', () => {
-      alert('You have been kicked from the room.');
-      window.location.reload();
+function showContextMenu(x, y, user) {
+    const menu = document.createElement('div');
+    menu.className = 'window';
+    menu.style.position = 'absolute';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.style.zIndex = '1000';
+
+    const content = document.createElement('div');
+    content.className = 'window-body';
+    menu.appendChild(content);
+
+    const kickButton = document.createElement('button');
+    kickButton.textContent = 'Kick User';
+    kickButton.onclick = () => {
+        if (isAdmin) {
+            socket.emit('kickUser', { user: user });
+        }
+        document.body.removeChild(menu);
+    };
+    content.appendChild(kickButton);
+
+    document.body.appendChild(menu);
+
+    document.addEventListener('click', function removeMenu() {
+        if (menu && menu.parentElement) {
+            menu.parentElement.removeChild(menu);
+        }
+        document.removeEventListener('click', removeMenu);
     });
-  </script>
+}
+
+document.getElementById('uploadButton').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            socket.emit('sendImage', { url: event.target.result });
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+});
+
+document.addEventListener('paste', (e) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                socket.emit('sendImage', { url: event.target.result });
+            };
+            reader.readAsDataURL(blob);
+        }
+    }
+});
+
+socket.on('imageMessage', (data) => {
+    if (bonzis[data.user]) {
+        const img = document.createElement('img');
+        img.src = data.url;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100px';
+        bonzis[data.user].speechBubble.innerHTML = '';
+        bonzis[data.user].speechBubble.appendChild(img);
+        bonzis[data.user].speechBubble.style.display = 'block';
+        setTimeout(() => {
+            bonzis[data.user].speechBubble.style.display = 'none';
+        }, 5000);
+    }
+});
+
+socket.on('nameChanged', (data) => {
+    if (bonzis[data.oldName]) {
+        bonzis[data.newName] = bonzis[data.oldName];
+        delete bonzis[data.oldName];
+        bonzis[data.newName].nametag.textContent = data.newName;
+        if (data.oldName === myNickname) {
+            myNickname = data.newName;
+        }
+    }
+});
+
+socket.on('colorChanged', (data) => {
+    if (bonzis[data.user]) {
+        const newSprite = new createjs.Sprite(new createjs.SpriteSheet({
+            images: [bonziSprites[data.color]],
+            frames: {width: 200, height: 160},
+            animations: bonziAnimations
+        }), "idle");
+        bonzis[data.user].stage.removeChild(bonzis[data.user].sprite);
+        bonzis[data.user].stage.addChild(newSprite);
+        bonzis[data.user].sprite = newSprite;
+    }
+});
+
+socket.on('kicked', () => {
+    alert('You have been kicked from the room.');
+    window.location.reload();
+});
+
+socket.on('adminStatus', (status) => {
+    isAdmin = status;
+    if (isAdmin && myBonzi) {
+        const adminTag = document.createElement('span');
+        adminTag.className = 'admin-tag';
+        adminTag.textContent = 'ADMIN';
+        myBonzi.nametag.appendChild(adminTag);
+    }
+});
+</script>
 </body>
 </html>
