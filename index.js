@@ -1,62 +1,122 @@
+// server.js
 const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
+const port = 3000;
 
-const rooms = {};
+// Store user data in memory for simplicity
 const users = {};
+const rooms = {};
 
 app.use(express.static('public'));
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
-
 io.on('connection', (socket) => {
-  console.log('a user connected');
+    console.log('Client connected');
 
-  socket.on('join', (data) => {
-    const { user, room } = data;
-    if (!rooms[room]) {
-      rooms[room] = [];
-    }
-    if (!users[user]) {
-      users[user] = room;
-      rooms[room].push(user);
-      socket.join(room);
-      io.to(room).emit('join', user);
-    }
-  });
+    // Handle join event
+    socket.on('join', (data) => {
+        const { user, room } = data;
+        if (!rooms[room]) {
+            rooms[room] = {};
+        }
+        rooms[room][user] = socket.id;
+        users[socket.id] = { user, room };
 
-  socket.on('talk', (data) => {
-    const { user, text } = data;
-    io.to(users[user]).emit('talk', { user, text });
-  });
+        // Broadcast join event to all clients in the room
+        io.to(room).emit('join', { user });
 
-  socket.on('update', (data) => {
-    const { oldName, newName } = data;
-    if (users[oldName]) {
-      const room = users[oldName];
-      users[newName] = room;
-      delete users[oldName];
-      io.to(room).emit('update', { oldName, newName });
-    }
-  });
+        // Handle leave event when client disconnects
+        socket.on('disconnect', () => {
+            if (users[socket.id]) {
+                const { user, room } = users[socket.id];
+                delete rooms[room][user];
+                delete users[socket.id];
 
-  socket.on('disconnect', () => {
-    console.log('a user disconnected');
-  });
+                // Broadcast leave event to all clients in the room
+                io.to(room).emit('leave', user);
+            }
+        });
+    });
 
-  socket.on('leave', (id) => {
-    if (users[id]) {
-      const room = users[id];
-      rooms[room] = rooms[room].filter((user) => user!== id);
-      delete users[id];
-      io.to(room).emit('leave', id);
-    }
-  });
+    // Handle talk event
+    socket.on('talk', (data) => {
+        const { user, text } = data;
+        const room = users[socket.id].room;
+
+        // Broadcast talk event to all clients in the room
+        io.to(room).emit('talk', { user, text });
+    });
+
+    // Handle uploadImage event
+    socket.on('uploadImage', (data) => {
+        const { user, image } = data;
+        const room = users[socket.id].room;
+
+        // Broadcast uploadImage event to all clients in the room
+        io.to(room).emit('uploadImage', { user, image });
+    });
+
+    // Handle changeName event
+    socket.on('changeName', (data) => {
+        const { oldName, newName } = data;
+        const room = users[socket.id].room;
+
+        // Update user data
+        users[socket.id].user = newName;
+        rooms[room][newName] = socket.id;
+        delete rooms[room][oldName];
+
+        // Broadcast update event to all clients in the room
+        io.to(room).emit('update', { oldName, newName });
+    });
+
+    // Handle kickUser event (admin action)
+    socket.on('kickUser', (data) => {
+        const { user } = data;
+        const room = users[socket.id].room;
+
+        // Find the socket ID of the user to kick
+        const socketId = rooms[room][user];
+
+        // If the user is found, disconnect them
+        if (socketId) {
+            io.sockets.sockets[socketId].disconnect();
+        }
+    });
+
+    // Handle banUser event (admin action)
+    socket.on('banUser', (data) => {
+        const { user, reason, length } = data;
+        const room = users[socket.id].room;
+
+        // Find the socket ID of the user to ban
+        const socketId = rooms[room][user];
+
+        // If the user is found, disconnect them and store the ban data
+        if (socketId) {
+            io.sockets.sockets[socketId].disconnect();
+            // Store the ban data in a database or a file
+            console.log(`User ${user} banned for ${length} minutes: ${reason}`);
+        }
+    });
+
+    // Handle muteUser event (admin action)
+    socket.on('muteUser', (data) => {
+        const { user } = data;
+        const room = users[socket.id].room;
+
+        // Find the socket ID of the user to mute
+        const socketId = rooms[room][user];
+
+        // If the user is found, mute them
+        if (socketId) {
+            // Implement muting logic here
+            console.log(`User ${user} muted`);
+        }
+    });
 });
 
-server.listen(3000, () => {
-  console.log('Server started on port 3000');
+server.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
 });
