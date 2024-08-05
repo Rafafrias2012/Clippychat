@@ -3,9 +3,10 @@ const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 
-let users = {};
-
 app.use(express.static('public'));
+
+let users = {};
+let members = {};
 
 io.on('connection', (socket) => {
   console.log('New connection');
@@ -23,8 +24,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('talk', (text) => {
-    socket.emit('talk', { id: socket.id, text: text });
-    socket.broadcast.emit('talk', { id: socket.id, text: text });
+    if (members[socket.id]) {
+      socket.emit('talk', { id: socket.id, text: text });
+      socket.broadcast.emit('talk', { id: socket.id, text: text });
+    }
   });
 
   socket.on('update', (data) => {
@@ -39,6 +42,23 @@ io.on('connection', (socket) => {
       socket.emit('leave', id);
       socket.broadcast.emit('leave', id);
       delete users[id];
+      delete members[id];
+    }
+  });
+
+  socket.on('mute', (id) => {
+    if (users[id]) {
+      members[id] = false;
+      socket.emit('mute', id);
+      socket.broadcast.emit('mute', id);
+    }
+  });
+
+  socket.on('unmute', (id) => {
+    if (users[id]) {
+      members[id] = true;
+      socket.emit('unmute', id);
+      socket.broadcast.emit('unmute', id);
     }
   });
 
@@ -47,6 +67,7 @@ io.on('connection', (socket) => {
       socket.emit('leave', socket.id);
       socket.broadcast.emit('leave', socket.id);
       delete users[socket.id];
+      delete members[socket.id];
     }
   });
 });
