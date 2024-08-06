@@ -6,7 +6,7 @@ const path = require('path');
 
 const port = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const users = {};
 const rooms = {};
