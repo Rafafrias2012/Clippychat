@@ -47,6 +47,7 @@ body, html {
     cursor: move;
     transition: opacity 0.5s ease-in-out;
     opacity: 0;
+    touch-action: none;
 }
 .clippy.visible {
     opacity: 1;
@@ -186,6 +187,31 @@ body, html {
 .youtube-container {
     max-width: 560px;
     max-height: 315px;
+}
+
+@media (max-width: 768px) {
+    .clippy {
+        touch-action: none;
+    }
+    
+    #chat-input {
+        flex-direction: column;
+    }
+    
+    #chat-input input {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .speech-bubble {
+        max-width: 150px;
+        font-size: 12px;
+    }
+    
+    .youtube-container {
+        max-width: 280px;
+        max-height: 157px;
+    }
 }
 </style>
 </head>
@@ -450,23 +476,41 @@ $(document).ready(function() {
     function startDrag(clippy, event) {
         if (clippy.id !== myId) return;
         
-        const initialX = event.clientX - clippy.x;
-        const initialY = event.clientY - clippy.y;
+        let initialX, initialY;
         
-        const onMouseMove = (e) => {
-            clippy.x = e.clientX - initialX;
-            clippy.y = e.clientY - initialY;
+        if (event.type === 'mousedown') {
+            initialX = event.clientX - clippy.x;
+            initialY = event.clientY - clippy.y;
+        } else if (event.type === 'touchstart') {
+            initialX = event.touches[0].clientX - clippy.x;
+            initialY = event.touches[0].clientY - clippy.y;
+        }
+        
+        const onMove = (e) => {
+            let clientX, clientY;
+            
+            if (e.type === 'mousemove') {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            } else if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+                e.preventDefault(); // Prevent scrolling on touch devices
+            }
+            
+            clippy.x = clientX - initialX;
+            clippy.y = clientY - initialY;
             $(`#clippy-${clippy.id}`).css({ left: clippy.x, top: clippy.y });
             socket.emit('updatePosition', { x: clippy.x, y: clippy.y });
         };
         
-        const onMouseUp = () => {
-            $(document).off('mousemove', onMouseMove);
-            $(document).off('mouseup', onMouseUp);
+        const onEnd = () => {
+            $(document).off('mousemove touchmove', onMove);
+            $(document).off('mouseup touchend', onEnd);
         };
         
-        $(document).on('mousemove', onMouseMove);
-        $(document).on('mouseup', onMouseUp);
+        $(document).on('mousemove touchmove', onMove);
+        $(document).on('mouseup touchend', onEnd);
     }
 
     function createClippy(id, name, x, y, isAdmin = false, isMod = false, agentType = null) {
@@ -488,7 +532,7 @@ $(document).ready(function() {
 
         $('#chat-area').append(clippyElement);
 
-        clippyElement.on('mousedown', (event) => startDrag(clippy, event));
+        clippyElement.on('mousedown touchstart', (event) => startDrag(clippy, event));
 
         const canvas = document.getElementById(`clippy-canvas-${id}`);
         const stage = new createjs.Stage(canvas);
