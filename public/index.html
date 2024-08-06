@@ -611,6 +611,9 @@ $(document).ready(function() {
         bubble.empty();
         if (type === 'text') {
             bubble.text(message);
+            if (voiceEnabled) {
+                speak(message);
+            }
         } else if (type === 'image') {
             bubble.append(`<img src="${message}" class="media-content">`);
         } else if (type === 'video') {
